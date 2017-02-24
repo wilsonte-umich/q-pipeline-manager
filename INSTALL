@@ -1,0 +1,34 @@
+
+From the directory containing this INSTALL file:
+
+    $ perl configure.pl
+
+    reading system information ............................
+    generating q program target
+    done
+    created q program target:
+      /path/to/some/folder/q-<#.#.#>/q
+
+Perform a quick check for appropriate installation by calling q with no commands or options:
+ 
+    $ ./q
+
+    q version #.#.#
+    q is a utility for submitting, monitoring and managing data analysis pipelines
+    usage:  q <command> [options] <masterFile> [...]
+    masterFile = path to a master instructions file
+    use 'q --help' or 'q <command> --help' for extended help
+ 
+In most cases you will want to add ‘/path/to/some/folder/q-<#.#.#>’ to your server 
+system PATH variable so that it is available to you from any server directory by 
+simply typing ‘q’.  Details of how to do this will depend on your server and account 
+configuration.
+
+Familiarize yourself with q as follows:
+
+    $ q --help
+    $ q submit --help
+    $ q submit --dry-run q_example.q
+
+and see also http://tewlab.org/q.
+

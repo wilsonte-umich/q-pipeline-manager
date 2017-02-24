@@ -1,0 +1,16 @@
+
+Module 'map/bwa/lib' has scripts called internally by 'map/bwa' - 
+these are not called by an end user.
+
+-------------------------------------------------------------------
+common.q
+-------------------------------------------------------------------
+
+Provides variable definitions.
+
+-------------------------------------------------------------------
+merge.sh
+-------------------------------------------------------------------
+
+Merges the the bam files created by parallel mapping jobs.
+

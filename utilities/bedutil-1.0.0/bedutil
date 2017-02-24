@@ -1,0 +1,17 @@
+#!/usr/bin/perl
+use strict;
+use warnings;
+use Cwd qw(abs_path);
+
+my $scriptFile = abs_path($0);
+my ($scriptDir, $scriptName) = $scriptFile =~ m|(.+)/(.+)|;
+my $command = shift @ARGV;
+if(!$command or $command eq '--help'){
+    my $readme = "$scriptDir/README";
+    system("cat $readme");
+} else {
+    my $targetScript = "$scriptDir/lib/$command.pl";
+    -e $targetScript or die "bedutil: unknown command: $command\n";
+    system("perl $targetScript @ARGV");
+}
+

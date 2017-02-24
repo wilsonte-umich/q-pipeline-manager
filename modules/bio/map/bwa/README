@@ -1,0 +1,135 @@
+
+Module 'bwa' uses the Burrows-Wheeler Alignment Tool to map high 
+throughput sequencing read data to a reference genome. 
+
+-------------------------------------------------------------------
+REQUIREMENTS
+-------------------------------------------------------------------
+
+bwa:  http://bio-bwa.sourceforge.net/
+
+samtools:  http://samtools.sourceforge.net
+    
+-------------------------------------------------------------------
+map_single.q
+-------------------------------------------------------------------
+
+Perform read mapping for a single-read library.  
+
+Required variables:
+$GENOME         The name of the reference genome, e.g. hg19.
+
+$GENOMES_DIR    The directory where the genome files can be found.  
+
+$FASTQ_GLOB1    A file glob, or a single file path, specifying the 
+                fastq format read data. May be gzipped.
+
+$NAME           A short descriptive name for the read data being analyzed.
+
+$OUTPUT_DIR     The directory into which the bam output file will be placed.
+                $OUTPUT_DIR will be created if it does not already exist.   
+                $OUTPUT_DIR and $NAME together should uniquely identify the data.
+
+Optional variables:
+$ALN_OPTIONS    Option string to be passed to 'bwa aln'. 
+                [default: $NULL, no options are set]
+
+$SAMXE_OPTIONS  Option string to be passed to 'bwa samse'. 
+                [default: $NULL, no options are set]
+
+$RM_DUP         Boolean whether or not to purge duplicate reads from the final 
+                bam file. [default: FALSE, duplicates are not removed]
+
+$TMP_DIR        The directory used to write temporary files. [default: /tmp]
+                $TMP_DIR will be created if it does not already exist.  
+                
+Notes:
+1)  Expects to find an index created by bio/map/bwa/index.q, below.
+
+2)  Creates output files "$OUTPUT_DIR/$NAME.bam" and "$OUTPUT_DIR/$NAME.bam.bai".
+
+3)  Read group header information must be provided via $SAMXE_OPTIONS, bwa 
+    samse/sampe option -r, if desired.
+
+Example:
+$GENOME       hg19
+$GENOMES_DIR  /path/to/genomes
+$FASTQ_GLOB1  /path/to/input/data/*.fastq.gz
+$NAME         mySample
+$OUTPUT_DIR   /path/to/output/data
+$ALN_OPTIONS  -n 3
+$RM_DUP       TRUE
+invoke bio/map/bwa/map_single.q 
+             
+-------------------------------------------------------------------
+map_paired.q
+-------------------------------------------------------------------
+
+Perform read mapping for a paired-end library. 
+
+Required variables:
+$GENOME         See map_single.q, above. 
+
+$GENOMES_DIR    See map_single.q, above. 
+
+$FASTQ_GLOB1    A file glob, or a single file path, specifying the 
+                fastq format data corresponding to read 1.  May be gzipped.
+                
+$FASTQ_GLOB2    A file glob, or a single file path, specifying the 
+                fastq format data corresponding to read 2.  May be gzipped.
+
+$NAME           See map_single.q, above. 
+
+$OUTPUT_DIR     See map_single.q, above. 
+
+Optional variables:
+$ALN_OPTIONS    See map_single.q, above. 
+
+$SAMXE_OPTIONS  Option string to be passed to 'bwa sampe'.
+                [default: $NULL, no options are set]
+
+$RM_DUP         Boolean whether or not to purge duplicate read pairs from the  
+                final bam file. [default: FALSE, duplicates are not removed]
+
+$TMP_DIR        See map_single.q, above. 
+                              
+NOTES: 
+See map_single.q, above. 
+
+Example:
+$GENOME       hg19
+$GENOMES_DIR  /path/to/genomes
+$FASTQ_GLOB1   /path/to/input/data/*.R1.fastq.gz
+$FASTQ_GLOB2   /path/to/input/data/*.R2.fastq.gz
+$NAME         mySample
+$OUTPUT_DIR   /path/to/output/data
+$ALN_OPTIONS  -n 3
+$RM_DUP       TRUE
+invoke bio/map/bwa/map_paired.q 
+
+-------------------------------------------------------------------
+index.q
+-------------------------------------------------------------------
+
+Creates the required index of the reference genome. 
+
+Required variables:
+$GENOME       See map_single.q, above. 
+
+$GENOMES_DIR  See map_single.q, above. 
+             
+Optional variables:
+$ALGORITHM    The indexing algorithm, i.e. bwa option '-a'. 
+              [default: bwtsw]
+
+NOTES: 
+1)  'index.q' expects to find file '$GENOMES_DIR/$GENOME/$GENOME.fa',
+    a single fasta file containing the sequence of all chromosomes.
+   
+2)  Output files are '$GENOMES_DIR/$GENOME/$GENOME.fa.bwt', etc.
+
+Example:
+$GENOME       hg19
+$GENOMES_DIR  /path/to/genomes
+invoke bio/map/bwa/index.q 
+

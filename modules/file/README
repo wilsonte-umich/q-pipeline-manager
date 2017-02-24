@@ -1,0 +1,146 @@
+
+Module 'file' contains utilities that execute various file 
+tasks.  Some work at submission time to help determine the jobs
+to be queued, others queue file manipulation jobs.  
+
+-------------------------------------------------------------------
+REQUIREMENTS
+-------------------------------------------------------------------
+
+Only standard Linux utilities are used by the file module.
+    
+-------------------------------------------------------------------
+exists.q
+-------------------------------------------------------------------
+
+Determine whether a file path exists on the system. 
+
+Required variables:
+$FILE     The file path to test. $FILE can be either a single file,
+          a file glob (e.g. '*.txt'), or a directory.
+       
+Preserved variables:
+$EXISTS   Whether or not $FILE exists, either TRUE or FALSE/$NULL.
+
+$N_FILES  The number of matching system objects. $N_FILES=1 for a 
+          found file or directory; a file glob can give any value.
+
+Example:
+$FILE *.txt
+invoke file/exists.q 
+exitUnless $EXISTS
+echo $N_FILES
+
+-------------------------------------------------------------------
+require.q
+-------------------------------------------------------------------
+
+Demand that a file path exists on the system, otherwise throw an 
+error at submission time. 
+
+Required variables:
+$FILE        See exists.q, above. Require multiple file paths using a 
+             list invocation.
+          
+Optional variables:
+$NO_REQUIRE  List of file paths not to require. Submission-time errors
+             will not be thrown for paths included in $NO_REQUIRE.
+             Use $NO_REQUIRE when a slave requires a file that will be 
+             created by an earlier step in a pipeline (i.e. it does 
+             not exist yet but will by the time any slave jobs are 
+             executed). $NO_REQUIRE provides a way of overriding the
+             slave's file requirement. 
+             [default: $NULL, all required files throw an error]
+
+Preserved variables:
+$N_FILES  See exists.q, above. 
+        
+Example:
+$FILES *.txt myFile.bam
+invoke file/require.q $FILE $FILES
+
+-------------------------------------------------------------------
+gzipped.q
+-------------------------------------------------------------------
+
+Determine whether a file is gzipped. 
+
+Required variables:
+$FILE     The file to test. $FILE can be a file glob (e.g. '*.txt').       
+        
+Preserved variables:
+$GZIPPED  Whether or not $FILE is gzipped, either TRUE or FALSE/$NULL.
+          If a glob is used, $GZIPPED will be TRUE if any of the 
+          matching files is gzipped.  You must ensure that your glob 
+          does not match a mixture of file types.
+
+Example:
+$FILE myFile.gz
+invoke file/gzipped.q 
+$STREAM $GZIPPED ? gunzip -c $FILE : cat $FILE
+
+-------------------------------------------------------------------
+check_prefix.q
+-------------------------------------------------------------------
+
+Demand that a file prefix is valid on the system, otherwise throw an 
+error at submission time. A prefix is a file path, including the stem
+of a file name, to which suffixes are appended by various programs.
+
+Required variables:
+$PREFIX  The prefix to test. 
+
+Example:
+$PREFIX /path/to/my/file_stem
+invoke file/check_prefix.q
+
+-------------------------------------------------------------------
+create.q
+-------------------------------------------------------------------
+
+Create a directory. 
+
+Required variables:
+$DIR  The directory to create.  The entire directory path will be created, 
+      if necessary.
+
+Example:
+$DIR /path/to/my/directory
+invoke file/create.q
+
+-------------------------------------------------------------------  
+split.q
+------------------------------------------------------------------- 
+
+Queue a job to split a large input file into multiple output files.  
+
+Required variables:
+$FILE      The file to split. 
+        
+$N_LINES   The number of lines per output file.     
+
+$PREFIX    The prefix of the output file names.
+
+Optional variables:
+$RM_FILE   Boolean whether or not to remove $FILE after the split.
+           [default: FALSE, $FILE will not be removed]
+         
+$COMPRESS  Boolean whether or not to gzip $PREFIX.* after the split.
+           [default: FALSE, compression will not be performed]     
+
+Notes:
+1)  'split.q' uses number suffixes to differentiate the output
+    files, in format $PREFIX.000, $PREFIX.001, etc.  
+    
+2)  $PREFIX can include path information to redirect the output.
+
+3)  If the input file is gzipped, it will be unzipped prior to
+    splitting so that lines will be counted correctly.
+
+Example:
+$FILE      myFile.gz
+$N_LINES   40000000
+$PREFIX    /path/to/my/files/myFile
+$COMPRESS  TRUE
+invoke file/split.q 
+

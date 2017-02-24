@@ -1,0 +1,107 @@
+div.sshReturn{
+    overflow:auto;
+}
+div.inputs{   
+}
+div.icon {
+    display:block;
+    position:absolute;
+    top:0px;
+    right:0px;
+    margin-right:13px;
+    margin-top:2px;
+}
+textarea.editBox{
+    font-family:monospace;
+    font-size:20px;
+    overflow:auto;
+    border:none;
+    margin-left:7px;
+    width:100%;
+}
+textarea.browseDir{
+    width:556px;
+    font-family:Arial;
+    font-size:21px;
+    padding-left:4px;
+}
+textarea.shellCommand{
+    font-family:monospace;
+    font-size:20px;
+    overflow:auto;
+    width:660px;
+    height:115px;
+}
+input.activeButton{
+    width:120px;
+    height:36px;
+    font-family:Arial;
+    font-size:21px;
+    background-color:#DDDDDE;
+    -moz-border-radius:18px; 
+    -webkit-border-radius:18px;
+    -khtml-border-radius:18px; 
+    border-radius: 18px; 
+}
+input.silencedButton{
+    width:120px;
+    height:36px;
+    font-family:Arial;
+    font-size:21px;
+    color:#AAAAAA;
+    background-color:#DDDDDE;
+    -moz-border-radius:18px; 
+    -webkit-border-radius:18px;
+    -khtml-border-radius:18px;
+    border-radius: 18px;
+}
+input.standard{
+    width:248px;
+    font-family:Arial;
+    font-size:21px;
+    padding-left:4px;
+}
+input.wide{
+    width:485px;
+    font-family:Arial;
+    font-size:21px;
+    padding-left:4px;
+}
+p.input{
+    font-family:Arial;
+    font-size:21px;
+    padding-left:3px;
+}
+select{
+    font-family:Arial;
+    font-size:21px;
+}
+select.standard{
+    width:255px;
+}
+select.column{
+    width:250px;
+}
+select.operator{
+    width:90px;
+}
+span.input{
+    font-family:Arial;
+    font-size:21px;
+}
+label{
+    font-family:Arial;
+    font-size:21px;
+}
+td{
+    padding:0px;
+    font-family:Arial;
+    font-size:20px;
+}
+td.status{
+    font-family:monospace;
+    font-size:20px;
+    font-weight: 500;
+    height:7px;
+    padding-left:5px;
+}

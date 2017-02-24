@@ -1,0 +1,11 @@
+div{
+    text-align:left;
+    margin-left:5px;
+}
+div.vSpacer{
+    height:7px;
+}
+p.errorMessage{
+    margin-left:5px;
+    color:darkred;
+}

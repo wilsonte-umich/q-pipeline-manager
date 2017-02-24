@@ -1,0 +1,41 @@
+
+'q remote' provides a web-based graphical user interface into q's pipeline 
+management utilities.  With q remote, you use your web brower to configure
+requests that are submitted to q installed on a job server.  
+
+There are two modes in which q remote can be run, depending on whether you 
+are in position to install a web server on your job server:
+
+Daemon Mode:
+
+In deamon mode, the q web server is installed on your local computer, for 
+example on your desktop or laptop PC, and accesses your job server via ssh 
+or Putty.  This requires that each end user install Perl and two Perl 
+modules on their PC, as well as generate and install an RSA key for host 
+authentication.  Any Windows, Mac or Linux machine can be used.  Once
+installed, the q remote daemon can be made to point at any number of job 
+servers by creating multiple configuration files.
+
+See 'daemon.README' for more information on installing daemon mode.
+
+Server Mode:
+
+In server mode, the q web server is installed on the job server.  The job 
+server must therefore run Apache httpd or some other http server.  Users
+point their web browser to an address determined by the web server.  It
+is up to the system adminstrator to ensure that users accessing the web
+site are subjected to appropriate authentication and authorization, 
+for example using LDAP, since once connected they will be able to run 
+virtually any job on your job server!!  Jobs are submitted to the 
+job scheduler under the user name assigned to the web server, NOT the 
+name of the user who has logged in.
+
+See 'server.README' for more information on installing server mode.
+
+The interface provided by daemon and server modes are essentially identical
+once loaded.  They differ in the way that they are set up and accessed.  In 
+general, server mode will provide a faster interface, but it requires 
+installation by a system administrator on any job server to be accessed, while
+the daemon is under the user's control and is not specific to any one job
+server.
+

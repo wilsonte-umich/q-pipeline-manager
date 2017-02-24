@@ -1,0 +1,29 @@
+
+'set_stat' and 'get_stat' are two related utilities that provide a method for
+storing and retrieving statistics about a target entity using a disk CSV file. 
+
+The file used to store the statistics is named '<targetDir>/<fileRoot>.stats.csv',
+where <targetDir> and <fileRoot> together should uniquely identify the target.
+
+NB: for legacy purposes, files named '<targetDir>/<fileRoot>_stats.csv' are also
+used, but only if already present.  If absent, the new format name is used, and 
+if a new format file name is found, and old format file name will be ignored.
+
+Simple usage ('set_stat' and 'get_stat' for more details):
+
+set_stat <targetDir> <fileRoot> <statName,statValue> [...]
+get_stat <targetDir> <fileRoot> <statName> [...]
+
+Example:
+
+set_stat /path/to/my/target object1 color,blue shape,round age,10yr
+cat /path/to/my/target/object1.stats.csv
+
+color,blue
+shape,round
+age,10yr
+    
+get_stat /path/to/my/target object1 color age   
+ 
+blue 10yr
+

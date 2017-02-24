@@ -1,0 +1,63 @@
+
+Module 'stat' provides an interface into the 'get_stat' and 'set_stat' 
+utilities for maintaining data tables of object statistics.  
+
+------------------------------------------------------------------- 
+REQUIREMENTS
+-------------------------------------------------------------------
+
+'get_stat' and 'set_stat' utilities - these load automatically with q
+and do not need to be installed separately.
+
+-------------------------------------------------------------------
+set.q
+-------------------------------------------------------------------
+
+Store a named statistic value into an object statistics file.
+
+Required variables:
+$TARGET_DIR   The directory where the statistics file is stored. A
+              submission time error will occur if $TARGET_DIR does not
+              exist or is not a directory.
+
+$FILE_ROOT    The root, or prefix, of the statistics file name.
+              Typically a sample or object identifier. $TARGET_DIR and
+              $FILE_ROOT together should uniquely identify the object.
+
+$STAT_NAME    The name of the statistic to store.
+
+$STAT_VALUE   The value to assign to the statistic.
+
+Example:
+$TARGET_DIR   /path/to/my/objects
+$FILE_ROOT    object1
+$STAT_NAME    myStat
+$STAT_VALUE   99
+invoke stat/set.q  
+
+-------------------------------------------------------------------
+get.q
+-------------------------------------------------------------------
+
+Recover a named statistic value from the object statistics file.
+
+Required variables:
+$TARGET_DIR    See 'set.q', above.
+
+$FILE_ROOT     See 'set.q', above.
+
+$STAT_NAME     See 'set.q', above.  Use a list invocation to recover multiple 
+               statistics.
+
+Preserved variables:
+$<$STAT_NAME>  The value of the statistic; FALSE if $STAT_NAME does not exist.
+               The name of the preserved variable is the same as the name of the
+               requested statistic (see example, below).
+
+Example:
+$TARGET_DIR   /path/to/my/objects
+$FILE_ROOT    object1
+invoke stat/get.q $STAT_NAME myStat1 myStat2  
+echo $myStat1
+echo $myStat2
+

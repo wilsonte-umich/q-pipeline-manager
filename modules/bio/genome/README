@@ -1,0 +1,395 @@
+
+Module 'genome' gets and does useful things to reference genomes.  
+
+------------------------------------------------------------------- 
+REQUIREMENTS
+-------------------------------------------------------------------
+
+samtools:  http://samtools.sourceforge.net
+
+-------------------------------------------------------------------
+file_schema.q
+-------------------------------------------------------------------
+
+Defines the file schema used by 'genome' and other q modules.
+
+Required variables:
+$GENOME       The name of the reference genome, e.g. hg19.
+
+$GENOMES_DIR  The directory where the genome files reside.
+ke bio/genome/split.qq
+te
+quit
+
+Preserved variables:
+Use 'cat file_schema.q' to see the variables that are preserved.
+
+Example:
+$GENOME       hg19
+$GENOMES_DIR  /path/to/genomes
+invoke bio/genome/file_schema.q  
+head $GENOME_FASTA        
+              
+-------------------------------------------------------------------
+get.q
+-------------------------------------------------------------------
+
+Download selected reference genome files from UCSC (http://genome.ucsc.edu/) and
+process into useful derivative file formats.
+
+Required variables:
+$GENOME       See file_schema.q, above.
+
+$GENOMES_DIR  See file_schema.q, above.
+              $GENOMES_DIR will be created if it does not already exist.
+              
+Optional variables:
+$BZ_FILES     List of additional bigZip files to download, i.e. from:
+              http://hgdownload.cse.ucsc.edu/goldenPath/$GENOME/bigZips/
+              
+$DB_FILES     Additional annotation database files to download, i.e. from:
+              http://hgdownload.cse.ucsc.edu/goldenPath/$GENOME/database/   
+              
+$N_CHUNKS     The _approximate_ number of chunks to divide $GENOME into when
+              executing future chunked job arrays. The actual chunk number will
+              be higher since chunks will not cross chromosome boundaries. 
+              [default: 75]
+            
+Notes:
+1)  All files are decompressed after download.
+
+2)  The following bigZip files are downloaded by default, if available:
+
+chromFa.tar.gz    Chromosome sequence files. Further processed into $GENOME_FASTA, 
+                  containing only the canonical chromosomes, and indexed.
+                  
+refMrna.fa.gz     RefSeq mRNA sequences; file is indexed upon completion.
+
+3)  The following annotation database files are downloaded by default, if available:
+
+chromInfo.txt.gz  Chromosome names and sizes.
+                  
+gap.txt.gz        Gap regions (Ns) in the genome, processed into $GAP_BED.
+
+refGene.txt.gz    The RefSeq gene annotation.  
+knownGene.txt.gz  The UCSC gene annotation, superset of RefSeq.  
+ensGene.txt.gz    The Ensembl gene annotation.  
+                  All annotations are processed into collapsed stranded
+                  and unstranded transcriptome maps (see lib/map.pl for details),
+                  $<annot>_GENES_BED, and $<annot>_TRANSCRIPTS_BED, the last 
+                  with a name field in format "tag:value[;tag:value ...]".
+                     
+ensemblToGeneName.txt.gz                   
+kgXref.txt.gz     Gene name conversion files for the above annotations, used to
+                  create a transcripts BED name-field tag called 'geneSymbol', 
+                  in addition to 'name'==transcriptID and 'name2'.  Map BED 
+                  files use this geneSymbol, or name2 when transcript ID is not 
+                  present in lookup file.
+
+4)  UCSC does not allow multiple anonyous FTP login sessions.  Therefore, do not
+    try to download more than one genome at a time.
+   
+5)  Although you can download optional tables, there is a good chance that they will
+    not be in a useful format (e.g. BED or GTF).  You may prefer to download them 
+    using the UCSC web interface so that you can select your desired file format,
+    or simultaneously download and process them using bed.q, below.
+    
+6)  Not all files are available as named for all genomes. You will only know what
+    was actually downloaded if you check the log files for your 'get.q' jobs.
+
+7)  Various statistics are written to '$GENOMES_DIR/$GENOME/$GENOME.stats.csv'.
+    These can be recovered using 'get_stat $GENOMES_DIR/$GENOME $GENOME <statName>'  
+    or using 'stat.q', below.
+
+Example:
+$GENOME       hg19
+$GENOMES_DIR  /path/to/genomes
+invoke bio/genome/get.q
+
+-------------------------------------------------------------------
+chrom_info.q
+-------------------------------------------------------------------
+
+Set a series of commonly used variables with chromosome information.
+
+Required variables:
+$GENOME        See file_schema.q, above.
+$GENOMES_DIR   See file_schema.q, above.
+
+Set variables:
+$CHROMS         list of all chromosomes except chrM
+$CHROM_SIZES    corresponding list of chromosome lengths
+$GENOME_SIZE    sum of $CHROM_SIZES
+$GAP_SIZE       sum of gap lengths
+$NOGAP_SIZE     $GENOME_SIZE - $GAP_SIZE
+$N_CHROMS       number of chromosomes
+$MAX_CHROM_SIZE size of largest chromosome
+
+Example:
+invoke bio/genome/chrom_info.q $STAT_NAME N_CHROMOSOMES CHROMOSOMES
+echo $N_CHROMS
+qsub my.q $CHROM $CHROMS
+
+-------------------------------------------------------------------
+stat.q
+-------------------------------------------------------------------
+
+Recover a named statistic value from the genome statistics file.
+
+Required variables:
+$GENOME        See file_schema.q, above.
+$GENOMES_DIR   See file_schema.q, above.
+$STAT_NAME     The name of the statistic to recover.  Use a list invocation to
+               recover multiple statistics.
+
+Preserved variables:
+$<$STAT_NAME>  The value of the statistic; FALSE if $STAT_NAME does not exist.
+               The name of the preserved variable is the same as the name of the
+               requested statistic (see example, below).
+
+Notes:
+1)  The following stastics are created by 'get.q', above.  You are free to add  
+    your own, in which case your statistics can also be recovered using 'stat.q'.
+
+CHROMOSOMES
+N_CHROMOSOMES
+SEQUENCES
+N_SEQUENCES
+N_BASES
+N_TRANSCRIPTS (based on RefSeq annotation)
+N_GAPS
+N_GAP_BASES
+N_GENES       (based on RefSeq annotation)
+N_GENE_BASES  (based on RefSeq annotation)
+NOMINAL_CHUNK_SIZE
+N_CHUNKS
+CHUNKS
+CHUNK_CHROMOSOMES
+CHUNK_STARTS
+CHUNK_ENDS
+CHUNK_SIZES   
+
+Example:
+invoke bio/genome/stat.q $STAT_NAME N_CHROMOSOMES CHROMOSOMES
+echo $N_CHROMOSOMES
+qsub my.q $CHROMOSOME $CHROMOSOMES
+
+-------------------------------------------------------------------
+motif.q
+-------------------------------------------------------------------
+
+Create a binned BED file in which the score field carries the fraction
+of bin bases that correspond to the last base of a supplied motif sequence.
+
+Required variables:
+$GENOME       See file_schema.q, above.
+
+$GENOMES_DIR  See file_schema.q, above.
+
+$MOTIF        The motif sequence being scored, all uppercase, e.g. GATC.   
+
+Optional variables:
+
+$BIN_SIZE     The desired output bin size. [default: 1000]
+
+$NAME         The name of the motif. [default: $MOTIF] 
+
+Notes:
+1)  The output file is named:
+    $GENOMES_DIR/$GENOME/$GENOME.$NAME.bin_$BIN_SIZE.bed
+    
+2)  Motifs can include ambiguous bases in an 'or' format, e.g. 'G|C' 
+    is the $MOTIF that will report the GC content of bins, while
+    '(G|A)C(G|A)' would match each of GCG, GCA, ACG, and ACA.
+    
+3)  Overlapping motifs are not scored.  For example, motif 'AA' will 
+    give a score of 2 against sequence 'AAAA', not 3, since it reports a 
+    match against bases 1-2 and 3-4, but not 2-3.
+
+Example:
+$GENOME       hg19
+$GENOMES_DIR  /path/to/genomes
+$MOTIF        CG
+$NAME         CpG
+invoke bio/genome/motif.q  
+
+-------------------------------------------------------------------
+bed.q
+-------------------------------------------------------------------
+
+Retrieve a UCSC table into BED6 format.
+
+Required variables:
+$GENOME         See file_schema.q, above.
+
+$GENOMES_DIR    See file_schema.q, above.
+
+$UCSC_FILE      The complete name of the UCSC annotation file to retrieve.
+               
+$NAME           A compact identifier for the output file.
+
+$CHROM_COLUMN   Numeric index of the UCSC column containing the feature chromosome.
+
+$START_COLUMN   Numeric index of the UCSC column containing the feature start.
+
+$END_COLUMN     Numeric index of the UCSC column containing the feature end.
+
+Optional variables:
+
+$NAME_COLUMN    Numeric index of the UCSC column containing the feature name.
+                [default: name is recorded as "*"]
+
+$SCORE_COLUMN   Numeric index of the UCSC column containing the feature score.
+                [default: score is recorded as 0]
+
+$STRAND_COLUMN  Numeric index of the UCSC column containing the feature strand.
+                [default: strand is recorded as "+"]
+                
+Notes:
+1)  The output file is named:
+    $GENOMES_DIR/$GENOME/$GENOME.$NAME.bed
+    
+2)  Column indexes are 1-referenced, i.e. numbered 1,2,3,..., including all
+    table columns as specified by the UCSC table schema.
+
+Example:
+$GENOME         hg19
+$GENOMES_DIR    /path/to/genomes
+$UCSC_FILE      recombRate.txt.gz
+$NAME           recombRate
+$CHROM_COLUMN   1
+$START_COLUMN   2
+$END_COLUMN     3
+$SCORE_COLUMN   5
+invoke bio/genome/bed.q  
+
+-------------------------------------------------------------------
+build.q
+-------------------------------------------------------------------
+
+Build a new reference genome by altering/mutating an existing one.
+
+Required variables:
+$GENOME         The name of the _source_ genome.
+
+$GENOMES_DIR    See file_schema.q, above.
+
+$NAME           A compact identifier for the new genome.
+
+$CHANGES_FILE   White-space-delimited file with desired sequence changes, one change per 
+                line, as follows (COORDINATES):
+                    chrom  last_before  first_after  replacement_sequence
+                or as follows (FLANKS):
+                    chrom  left_flank   right_flank  replacement_sequence
+                    
+$CHANGE_FORMAT  Either COORDINATES or FLANKS, reflecting $CHANGES_FILE format.
+                    
+Optional variables:                    
+                    
+$LIFT_BEDS      List of $GENOME BED files to transform into the coordinates of
+                the new reference genome, in addition to the defaults.
+
+$FEATURES_FILE  White-space-delimited file with new BED features to add based on 
+                $CHANGES_FILE, formatted as follows:
+                    bed_file  chrom  sequence  [name  score  strand ...]
+           
+Notes:
+1)  last_before and first_after are 1-referenced coordinates in $GENOME chrom
+    for the last base to be preserved before replacement_sequence and the first
+    base base to be preserved after replacement_sequence. For example if 
+    chrX = "CCAAAAGGGGCC", then change "chrX 6 7 TT" would yield "CCAAAATTGGGGCC".
+    Changes are processed from right to left along the chromosome so that they
+    are made as expected, as long as they do not overlap. $CHANGE_FORMAT must be
+    set to COORDINATES.
+    
+2)  left_flank and right_flank are _unique_ sequences in $GENOME chrom used to
+    discover last_before and first_after (generally slower), for example if 
+    chrX = "CCAAAAGGGGCC", then change "chrX AAAA GGGG TT" would yield "CCAAAATTGGGGCC".  
+    Changes are processed in the order indicated in $CHANGES_FILE.  It is up to 
+    the user to make sure that changes do not conflict when processed in that order.  
+    $CHANGE_FORMAT must be set to FLANKS.  If flank sequences are not unique, the
+    first encountered matches are used.
+    
+3)  The coordinates of features in $FEATURES_FILE are determined after all sequence
+    changes are made. They are then added to the indicated lift bed file, which will
+    be created anew if not already created by $LIFT_BEDS. bed_file must use $NAME,
+    not $GENOME! Sequences must always be on the top genome strand.
+    
+4)  Comment lines beginning with # are allowed in $CHANGES_FILE and $FEATURES_FILE.
+
+5)  All input and output sequences are converted to uppercase.
+
+6)  build.q expects to find files $GENOMES_DIR/$GENOME/chromosomes/<chrom>.fa, 
+    which are created by get.q.
+
+7)  $LIFT_BEDS always includes the following files, if present, as created by get.q:
+        $GENOMES_DIR/$GENOME/$GENOME.gap.bed
+        $GENOMES_DIR/$GENOME/$GENOME.*.transcripts.bed
+        $GENOMES_DIR/$GENOME/$GENOME.*.genes.bed
+        $GENOMES_DIR/$GENOME/$GENOME.*.map.*.bed
+        
+8)  Output is placed into directory $GENOME_DIR/$GENOME.
+
+Example:
+$GENOME         hg19
+$GENOMES_DIR    /path/to/genomes
+$NAME           my19
+$CHANGES_FILE   /path/to/my/changes.txt
+$CHANGE_FORMAT  COORDINATES
+invoke bio/genome/build.q  
+
+-------------------------------------------------------------------
+split.q
+-------------------------------------------------------------------
+
+Split all chromosomes of a genome on a query sequence. One typical
+use is to find the expected fragments of a restriction enzyme digestion.
+
+Required variables:
+$GENOME         See file_schema.q, above.
+
+$GENOMES_DIR    See file_schema.q, above.
+
+$SPLIT_SEQ      The sequence to split on, e.g. GGATCC
+
+$NAME           A compact identifier for $SPLIT_SEQ, e.g. BamHI.
+
+$OUTPUT_TYPE    Either FASTA or BED, as describe in Notes.
+                
+Notes:
+1)  If $OUTPUT_TYPE = FASTA, the output file is:
+
+$GENOMES_DIR/$GENOME/$GENOME.split.$NAME.fa, in format:
+
+>chrX_1_<end>
+ACGTACGT$SPLIT_SEQ
+>chrX_<start>_<end>
+GAGAGAGA$SPLIT_SEQ
+>chrX_<start>_<end_of_chrom>
+ACGTACGT
+
+2)  If $OUTPUT_TYPE = BED, the output file is:
+
+$GENOMES_DIR/$GENOME/$GENOME.split.$NAME.bed, in format:
+
+chrX  0        <end>           chrX:1-<end>                 length  +
+chrX  <start>  <end>           chrX:<start>-<end>           length  -
+chrX  <start>  <end_of_chrom>  chrX:<start>-<end_of_chrom>  length  +
+
+3)  Output files are not a true restriction digestion because the code does
+    not take into account cleavage positions. $SPLIT_SEQ is always placed
+    at the end of a fragment, except for the trailing portion of each
+    chromosome after the last instance of $SPLIT_SEQ.
+    
+4)  All input and output sequences are converted to uppercase.
+
+5)  $SPLIT_SEQ is searched on both strands, even when not palindromic.
+
+Example:
+$GENOME         hg19
+$GENOMES_DIR    /path/to/genomes
+$SPLIT_SEQ      GGATCC
+$NAME           BamHI
+$OUTPUT_TYPE    BED
+invoke bio/genome/split.q
+

@@ -1,0 +1,70 @@
+
+'daemon.pl' is the HTTP deamon version of q remote that runs a web server
+on your local computer, for example on your desktop or laptop PC, and 
+accesses your job server via ssh or Putty.  It gathers host connection
+information from 'daemon.conf', or iterations of this file, and gathers
+project information from 'projects/<user>.projects'.
+
+INITIAL SETUP:
+
+1)  Install the following prerequisites on your local computer:
+
+a) On Windows, the Plink, PSCP and Pageant utilities (related to PuTTY).
+b) Perl (ActivePerl is recommended for Windows users).
+c) Perl modules:
+     HTTP::Daemon
+     CGI
+
+On Windows, install modules using the ActivePerl Package Manager, 
+on Linux use:
+
+sudo su
+perl -MCPAN -e shell
+install HTTP::Daemon
+install CGI
+
+2) For various reasons, q remote does not support password authentication. 
+Instead, create an RSA key-pair that you can use to log on to your host 
+server. This is done using ssh-keygen (or PuTTYgen on Windows).  See manuals
+for these commands for more information.  It is highly recommended that you
+create a passphrase for your key-pair(s) to protect them in case they are
+stolen.  By default, when you load the daemon in Step 5, q remote will 
+use either ssh-add or Pageant to prompt you for the passphrase for the
+key specified in 'daemon.conf' in Step 4.  This will give the daemon 
+full access to your host via ssh without further prompting.
+
+http://wikipedia.org/wiki/Ssh-keygen
+http://the.earth.li/~sgtatham/putty/0.62/htmldoc/Chapter8.html#pubkey
+
+3) Make a remote connection to the host server using ssh (or Plink on Windows)
+from the command line.  This is a one-time requirement so that you have the
+opportunity to say 'yes' that you trust the connection and wish to store the
+server key for future reference.  
+
+4) Edit the 'daemon.conf' configuration file, found in the same folder as
+this README file, following the instructions therein.  'keyFile' should refer
+to the private key file you created in Step 2).
+
+
+ON EACH USAGE:
+
+5) Run the q remote daemon as follows:
+
+perl /path/to/daemon.pl [-n/--no-agent] [-c/--config configFile]
+
+where:
+
+a) daemon.pl is found in the same folder as this README file.
+b) the daemon must be run by the user, not by root at system startup.
+c) -n/--no-agent suppresses passphrase prompting by ssh-add/Pagaent (see Step 2)
+d) -c/--config specifies the configFile to use [default: daemon.conf]
+
+6) Point your web browser to:
+
+http://localhost:8000/q/daemon.pl
+
+changing the port from 8000 to your value if you have changed it
+in 'daemon.conf'.  If you have provided a browserCommand in 'daemon.conf'
+the web page will be automatically opened for you (unless you are using
+Pagaent).
+

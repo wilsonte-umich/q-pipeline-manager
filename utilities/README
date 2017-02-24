@@ -1,0 +1,61 @@
+
+Utilities are pre-assembled code for executing various common tasks
+within pipeline jobs. One of the most important is the conversion of
+array task IDs into the specific work to be executed by a worker.
+
+-------------------------------------------------------------------
+shell script utilities
+-------------------------------------------------------------------
+
+q automatically provides a series of functions to shell worker scripts,
+e.g. bash script 'myScript.sh' - you do not need to initialize these 
+functions in your script. See the q documentation for details.
+
+-------------------------------------------------------------------
+non-shell script utilities
+-------------------------------------------------------------------
+
+In some cases, q also provides utilities to worker scripts written in a
+non-shell languange. In these cases, you need to add one line to your 
+worker script to initialize the utility functions.  Currently, utilities
+are available for worker scripts in the following languages:
+
+R         utilities.R
+Perl      utilities.pl
+
+See each utility script for details on its functions and how to initialize
+them in your worker script.
+
+-------------------------------------------------------------------
+miscellaneous utilities
+-------------------------------------------------------------------
+
+The q distribution includes other utilities packages that you may find 
+useful. Many of these are designed to work as stream utilities. All 
+program targets of these utility packages are automatically available
+in the environment PATH, so they can simply be called from within a 
+shell worker script, e.g.
+
+slurp myFile | ...
+
+--------------------
+vital statistics
+--------------------
+
+'set_stat' and 'get_stat' are two related utilities that provide a method for
+storing and retrieving statistics about a target entity using a disk CSV file. 
+ 
+--------------------
+file slurping
+--------------------
+
+'slurp' and 'glurp' are related utilites that help with buffering of file input
+and output (IO) in parallel environments with large files.
+
+--------------------
+BED utilities
+--------------------
+
+'bedutil' is a set of utilities for manipulation of BED files. The focus of
+these tools is on permutation simulations of features.
+ 

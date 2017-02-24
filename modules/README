@@ -1,0 +1,36 @@
+
+Modules are pre-assembled code for executing various common tasks
+in q pipelines. Use them as shortcuts for assembling your own 
+pipelines, either by invoking them as is, for example:
+
+invoke file/require.q $FILE myFile.txt
+    
+or by copying them to a different location and modifying them to
+suit your specific needs.
+
+-------------------------------------------------------------------
+file
+-------------------------------------------------------------------
+
+Utilities that execute various file manipulation tasks.  
+
+-------------------------------------------------------------------
+math
+-------------------------------------------------------------------
+
+Utilities that execute various common math functions. 
+
+-------------------------------------------------------------------
+stat
+-------------------------------------------------------------------
+
+Provides an interface into the 'get_stat' and 'set_stat' 
+utilities for maintaining data tables of object statistics.  
+
+-------------------------------------------------------------------
+bio
+-------------------------------------------------------------------
+
+Short for 'bioinformatics'. Execute various tasks common to genomic,
+next-generation sequencing, and related analyses.
+

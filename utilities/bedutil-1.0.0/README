@@ -1,0 +1,195 @@
+
+'bedutil' is a set of utilities for manipulation of BED files.
+The focus of these tools is on permutation simulation and regression
+analysis of features.
+
+--------------------------------------------------------------------------------
+REQUIREMENTS
+--------------------------------------------------------------------------------
+
+Perl - http://www.perl.org/
+
+R - http://www.r-project.org/
+
+--------------------------------------------------------------------------------
+USAGE
+--------------------------------------------------------------------------------
+
+bedutil is called from the command line as:
+
+    bedutil <command> <value_option>=<value> <boolean_option>  [...]
+
+where commands are enumerated below, and the required and optional
+parameters can be listed using:
+
+    bedutil <command> --help
+
+Parameters can also be passed implicitly as environment variables, making
+bedutil friendly to calling from within q pipelines.
+
+--------------------------------------------------------------------------------
+CREATE A SIMULATION TABLE
+--------------------------------------------------------------------------------
+
+----------------
+permute
+----------------
+
+'permute' takes feature BED lines and prints the BED itself as well as
+random permutations of the BED.  The iteration number is appended as the
+last field (==-1 for the input BED features).
+
+----------------
+crossing
+----------------
+
+'crossing' takes feature BED lines and calculates a score against a
+provided reference BED file based on whether the input feature crosses
+one or more reference features.  Various score types are possible.
+
+----------------
+crosstab
+----------------
+
+'crosstab' takes feature BED lines that have had an evaluation score added
+as the last column, and a simulation iteration added as the penultimate column.
+A scores table of input features (rows) by iterations (columns) is created,
+using the BED name field as the unique feature identifier.
+
+----------------
+simulate
+----------------
+
+'simulate' takes feature BED lines and streams them through
+'permute | crossing | crosstab' as a shortcut for assembling a complete
+simulation table.
+
+--------------------------------------------------------------------------------
+ANALYZE A SIMULATION TABLE
+--------------------------------------------------------------------------------
+
+----------------
+cdf
+----------------
+
+'cdf' takes an assembled simulation as formatted by crosstab and assembles
+plots of the estimated cumulative distribution function (CDF) as well as
+rank-quantile plots of the iterations of the smallest, median, and largest
+input features.
+
+----------------
+normtest
+----------------
+
+'normtest' takes an assembled simulation as formatted by crosstab and applies
+the Shapiro-Wilk normality test to the iteration values of each feature. A plot
+is constructed showing the normality test p-value as a function of feature length.
+
+----------------
+aggregate
+----------------
+
+'aggregate' takes an assembled simulation as formatted by crosstab and
+estimates enrichment p-values by two methods. 1) The distribution of aggregated
+feature scores for each iteration is plotted and compared to the actual
+aggregate feature score. 2) The distribution of the quantiles of the actual
+scores for each feature relative to its iterations is plotted and subjected to
+one-sample two-sided Sign and Wilcoxon tests.
+
+----------------
+by_score
+----------------
+
+'by_score' takes an assembled simulation as formatted by crosstab and stratifies
+the input features by the original BED score field (field 5). A correlation plot
+of these strata to the appended score (field 7) for the actual input features
+(iteration = -1) is constructed and Pearson and Spearman coefficients calculated.
+The 'aggregate' command is then applied to each stratum and box plots made to
+assess the correlation of simulation score enrichment with the original score.
+
+--------------------------------------------------------------------------------
+MANIPULATE BED FEATURES AND ASSESS CLUSTERING
+--------------------------------------------------------------------------------
+
+----------------
+split
+----------------
+
+'split' takes feature BED lines and splits any overlapping features
+into new smaller features corresponding to each unique overlap segment.
+
+----------------
+group
+----------------
+
+'group' takes feature BED lines on STDIN and groups them by coordinate.
+
+----------------
+collapse
+----------------
+
+'collapse' takes feature BED lines and collapses them into contiguous
+BED features that fuse previously overlapping features into one feature.
+
+----------------
+hotspot
+----------------
+
+'hotspot' takes feature BED lines and collapses them.  The input features are
+further subjected to permutation, with the permuted features collapsed within
+each iteration to determine the likelihood that actual overlap clusters were
+observed by chance.
+
+--------------------------------------------------------------------------------
+ANALYZE BED SCORES (WITHOUT SIMULATION)
+--------------------------------------------------------------------------------
+
+----------------
+correlate
+----------------
+
+'correlate' takes two merged BED streams and calculates correlation coefficients
+between their score fields (field 5).
+
+----------------
+regression
+----------------
+
+'regression' takes feature BED lines, streams them through 'crossing'
+to collect a second score value, and then performs regression analysis
+comparing the input scores (field 5) to the newly calculated scores.
+
+--------------------------------------------------------------------------------
+DEPRECATED
+--------------------------------------------------------------------------------
+
+----------------
+frequency DEPRECATED
+----------------
+
+'frequency' takes feature BED lines that have had an evaluation score
+added as the last column, and a simulation iteration added as the
+penultimate column.  For each iteration, an aggregate feature score is
+calculated.  A frequency distribution of the aggregrate values is constructed.
+
+----------------
+distribution DEPRECATED
+----------------
+
+'distribution' takes feature BED lines that have had an evaluation score
+added as the last column, and a simulation iteration added as the
+penultimate column. Frequency distributions of the actual individual scores,
+and separately all individual iteration scores, are constructed.
+
+----------------
+relate DEPRECATED
+----------------
+
+'relate' takes feature BED lines that have had a dependent evaluation score
+added as the last column, a simulation iteration added as the penultimate
+column, and that bear an independent feature score in BED column 5. A plot
+is constructed correlating the dependent score to the independent score for
+the actual data points, with ranges for the simulation. A correlation
+coefficient is calculated for the actual data.
+
+

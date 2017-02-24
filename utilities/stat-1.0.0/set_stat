@@ -1,0 +1,55 @@
+#!/usr/bin/perl
+use strict;
+use warnings;
+
+my ($targetDir, $fileRoot, @stats) = @ARGV;
+
+my $usage = "usage: set_stat <targetDir> <fileRoot> <statName,statValue> [...]\n";
+$usage .= "will use or create <targetDir>/<fileRoot>.stats.csv with <statName,statValue> per line\n";
+$usage .= "omitting <statValue> will clear and remove <statName> from the file\n";
+$usage .= "<statName,\"word list\"> will assign a list of words to <statName>\n";
+$usage .= "<statName,\"`shell command`\"> will assign the results of <shell command> to <statName>\n";
+($targetDir and $fileRoot and $stats[0]) or die "insufficient arguments specified\n$usage";
+-d $targetDir or die "$targetDir is not a valid directory\n$usage";
+
+my $newFormat = "$targetDir/$fileRoot.stats.csv";
+my $oldFormat = "$targetDir/$fileRoot\_stats.csv";
+my $statsFile = $newFormat;   # new formats stats file names are used first, if present
+unless(-e $statsFile){
+    $statsFile = $oldFormat;  # support use of old format stats file name, but only if already present
+    unless(-e $statsFile){
+        $statsFile = $newFormat;  
+    }
+}
+qx/touch $statsFile/;
+
+my $stats = qx/cat $statsFile/;
+foreach my $stat(@stats){
+    $stat =~ s|\n| |g;
+    $stat =~ m/^(.+?),(.*)$/ or die "could not determine statName in stat $stat\n";
+    setStat($1, $2);
+}
+open my $statsH, ">", $statsFile or die "could not open $statsFile for writing: $!\n";
+$stats and print $statsH $stats;
+close $statsH;
+
+sub setStat {
+    my ($statName, $statValue) = @_;
+    open my $statsH, "<", \$stats;
+    my ($newStats, $encountered);
+    while(my $stat = <$statsH>){
+        if($stat =~ m/^$statName,.*\n/){
+            $encountered = 1;
+            if(defined $statValue and $statValue ne ''){
+                $stat =~ s|$statName,.*\n|$statName,$statValue\n|;
+            } else {
+                next;
+            }
+        }
+        $newStats .= $stat;
+    }
+    close $statsH;
+    $encountered or (defined $statValue and $statValue ne '' and $newStats .= "$statName,$statValue\n");
+    $stats = $newStats;
+}
+

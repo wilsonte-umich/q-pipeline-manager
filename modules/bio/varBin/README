@@ -1,0 +1,88 @@
+
+Module 'varBin' calculates variable width bins and compares them
+between samples. The general assumption is that you wish to find
+copy number changes based on read depth that are expected to be 
+rare, i.e. present in only one out of a set of input samples.
+
+------------------------------------------------------------------- 
+REQUIREMENTS
+-------------------------------------------------------------------
+
+samtools:  http://samtools.sourceforge.net
+
+-------------------------------------------------------------------
+COMMON VARIABLES (required by all functions)
+-------------------------------------------------------------------
+
+$VAR_BIN_DIR    The directory where output files are placed.
+$GENOME         The name of the reference genome, e.g. hg19.
+$GENOMES_DIR    The directory where the genome files reside.
+                Expects to find files created by bio/genome/get.q  
+
+Example:
+$VAR_BIN_DIR    /path/to/output
+$GENOME         hg19
+$GENOMES_DIR    /path/to/genomes
+
+-------------------------------------------------------------------
+make_map.q
+-------------------------------------------------------------------
+
+Creates a map of fragment coverage breaks along each chromosome
+for each sample, i.e. a type of coverage depth plot.
+
+Required variables:
+$SAMPLE     A single sample name, may draw from many bam files.
+$BAM_FILES  A list of bam files whose reads will be mapped as $SAMPLE.
+            One map will be made of reads merged from all $BAM_FILES.
+
+Optional variables:
+$MIN_MAPQ   Minimimum allowed mapping quality.
+            default: 10
+  
+Example:
+$SAMPLE         sample_1
+$BAM_DIR        /path/to/bam/files
+$BAM_FILES      $BAM_DIR/sample_1a.bam $BAM_DIR/sample_1b.bam 
+invoke bio/varBin/make_map.q
+
+-------------------------------------------------------------------
+find_CNVs.q
+-------------------------------------------------------------------
+
+Calculates equally-weighted variable-width bins based on all samples
+in a group, and then determines if any samples in the groups are
+deviant in coverage from the other samples across a series of bins,
+i.e. that those samples contain CNVs.
+
+Required variables:
+$SAMPLES        The set of samples names to analyze.
+$GROUP_NAME     A short descriptive name of the set of $SAMPLES.
+$REF_REGION     The genome region to use as a copy number reference
+                in format 'chr' or 'chr:start-end'.
+$REF_PLOIDY     The enforced ploidy of $REF_REGION, typically 2.
+                The modal bin width is dynamically adjusted to
+                optimize detection of copy number $REF_PLOIDY + 1.
+
+Optional variables:
+$MAX_CN         Maximum copy number state built into Hidden Markov Model
+                Higher copy spans are collapsed into $MAX_CN + 1
+                default: 4
+$IGNORE_CHROMS  Comma-delimited list of chromosomes to ignore,
+                e.g. 'chrM,chrY'.
+
+Prerequisites:
+Expects that make_map.q has already been run on all $SAMPLES.
+
+Notes:
+At present, the user must ensure that all $SAMPLES have the same sex;
+if not, sex chromosomes may behave erratically.
+
+Example:
+$SAMPLES        sample_1 sample_2
+$GROUP_NAME     project_1
+$REF_REGION     chr1:100000000-200000000
+$REF_PLOIDY     2
+$MAX_CN         6
+$IGNORE_CHROMS  chrY
+invoke bio/varBin/find_CNVs.q 

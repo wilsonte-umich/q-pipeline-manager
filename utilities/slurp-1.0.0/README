@@ -1,0 +1,126 @@
+
+SLURP AND GLURP
+
+'slurp' and 'glurp' are related utilites that help with buffering of file input and output (IO) in parallel environments with large files.
+
+
+THE PROBLEM
+
+In many applications, files are read from or written to the disk "one line at a time".  This isn't completely true, since there is always some buffering occurring such that the system actually reads a chunk of data from the file, called the "buffer".  A similar phenomenon occurs when you write to disk - lines are only written when the memory buffer is full. IO buffers are generally quite small (a few KB) compared to the very large files encountered in many informatics applications.  This is not a problem if you are only handling one file at a time on a system.  In fact, a small buffer is preferred in this situation as it allows the system to read and write more continuously and thus efficiently.  The same principle applies when streaming data in a pipeline, e.g. 'grep | sed | sort', where the Linux pipe buffer is typically 64K.  This allows the commands before and after the pipe to always have data to chew on.  If the buffer was extemely large, the first command would have to finish before the second command could ever begin, which makes the pipeline less efficient.
+
+However, this standard situation becomes problematic when many large files are being read in parallel via a single IO interface.  This might occur in two situations.  First, a server might have many CPUs or nodes all running IO-intensive jobs all trying to spin the disk at the same time.  Second, a single job might be attempting to read many parallel file inputs.  This is commonly encountered in a merge command, such as 'sort -m file1 file2 ...'.  In either case, IO might be repeatedly asked to read or write small KB-sized chunks from potentially hundreds of different files.  This situation can seriously degrade IO performance.  
+
+When reading many large files in parallel on an IO interface, it is more efficient to read or write sigificantly larger buffer chunks.  This allows the IO to feed data to commands in bursts that the command must then process, during which time the IO can handle other requests.  This approach requires more memory for the command process, but this is rarely an issue on modern servers with many GB of RAM.  It will also slow down the command process, which has to wait for the buffer to fill.  However, this trade-off can be highly favorable in comparison to the severe degradation of IO performance under an excessive number of small-buffer requests.  This is especially true when the command itself is CPU-intensive, where the time spent waiting for the IO will be small in comparison to the time spent processing the data.
+
+
+THE SOLUTION = SLURPING
+
+Some programs understand this problem and themselves use large internal buffers.  However, many do not, and it is difficult if not impossible to know how any individual program handles buffering.  Fortunately, there is no harm in applying an external pre- or post-program buffer, which is precisely what the slurp utility does.
+
+To 'slurp' is to read an entire file contents before acting on it, the opposite extreme from file streaming.  The slurp utility is named for this concept, although in default mode slurp uses a 500M buffer rather than reading the entire file (true slurping is possible by specifying a buffer size of 0).  A 500M buffer is >1000-fold larger than typical system buffers, but still many times smaller than many input files, and provides a good balance in most applications. 
+
+The slurp utility can act as a data input buffer, a data output buffer, or both.  It is mainly intended to act at the beginning and the end of data streams at the point where data is either read from or written to disk, as described in detail below.  However, if desired one can also slurp data in the middle of a stream, e.g. 'grep | slurp | sed ...".  Just understand that this will slow down the stream since, in the example given, sed will have to wait for the slurp buffer to fill before it can begin processing data.
+
+
+SLURP USAGE
+
+$ slurp --help
+usage: 
+   slurp [-s bufferSize] [-m outputMode] [-o outFile] [inFile [...] | inPipe]
+action:
+   buffers a stream from input to output to reduce system IO calls
+options:
+   -s int     buffer size as number of bytes, 0=entire input (default=500M)
+   -m str     file output mode, either '>' (overwrite) or '>>' (append) (default='>')
+   -o str     file to which the output is written (default=stdout)
+arguments:
+   inFile(s)  file(s) from which the input is read (stdin if absent)
+              note: multiple files are read in series
+   inPipe     a command and its arguments (stdin if absent)
+examples:
+   sort -m <(slurp file1) <(slurp file2) | slurp -o file3
+   slurp samtools view inBam chr21 | ... | sort -o >(slurp -o file)
+
+
+INPUT BUFFERING
+
+There are four basic ways to use slurp as an input buffer.  The first two apply if the input is a file, or a list of files, that is to be read in its entirety.  The first uses standard streaming techniques:
+
+slurp file.* | sort | ...
+
+where slurp buffers the input file list and passes the data it reads to STDOUT (i.e. on to sort).  Note that when the file list contains multiple files, they are read and output in series (see glurp, below, for reading input files in parallel).  The second method uses bash process redirection, where the same net effect is achieved with the syntax:
+
+sort <(slurp file.*) ...
+
+where '<(slurp file.*)' causes the output of slurp on STDOUT to be fed to sort as if it were a file being read.  In reality, slurp is taking its input from the file list via IO and buffering it using the standard 500M buffer.  'slurp -s 1G' would, for example, increase the buffer size. 
+
+A different situation exists when the command will not read the entire input file, but instead reads only part of a disk file. One example is the 'samtools view' utility, which uses an index to determine which portion of a large disk file should be read.  The entire input file is never loaded, so the following will NOT work:
+
+samtools view <(slurp inBam) chr21 | ...   WRONG!!
+
+because samtools will not know how to interpret the chr21 index for a process redirection.  In fact, one has no desire in this case to read (or slurp) the entire input file, which would defeat the purpose of binary file indexing.  Instead, the objective is to slurp the output of 'samtools view' in one of two ways.  The first places slurp after samtools in a pipeline:
+
+samtools view inBam chr21 | slurp | ...
+
+so that buffering is applied to the step after slurp. The second equivalent method is to tell slurp to read its data from a command rather than a file as follows:
+
+slurp samtools view inBam chr21 | ...
+
+Note that slurp automatically determines whether an input is a file list or a command plus arguments; precedence is given to files if the first encountered list item is identified as a valid file path.
+
+
+OUTPUT BUFFERING
+
+Most programs can either be told to write to an output file or print to STDOUT by default.  One can use slurp to add IO buffering to each of these styles in a manner highly parallel to input buffering.  Here, output buffering in a stream would look like this:
+
+... | sort | slurp -o outFile
+
+while equivalent buffering using process redirection would look like this:
+
+... | sort -o >(slurp -o outFile)
+
+Putting input and output buffering together one might end up with:
+
+sort <(slurp file) | ... | slurp -o outFile
+
+
+BINARY VS. TEXT FILES
+
+It might be expected that text and binary files are handled differently, but this is not the case.  Because slurp is simply filling a buffer before passing the data on to the next command, binary and text files are handled in precisely the same manner.
+
+
+PARALLEL INPUT SLURPING WITH GLURP
+
+In a highly parallel environment, one might find oneself needing to pass a large number of individual files to a single command, which is precisely the situation where input buffering can be highly beneficial.  However, the following is NOT useful:
+
+sort -m <(slurp file.*)  WRONG!!
+
+because bash would expand 'file.*' before passing the list to slurp and slurp would pass the data from the file list to sort in a serial fashion, not in a parallel fashion as required when using sort in merge mode.  What is actually needed is to expand 'file.*' into:
+
+sort -m <(slurp file.1) <(slurp file.2) ...
+
+which is precisely the action of the glurp utility, where 'glurp' is an amalgamation of 'glob' and 'slurp'.
+
+
+GLURP USAGE
+
+$ glurp --help
+usage:
+   glurp [-s bufferSize] <commandString> <file> [...]
+action:
+   passes file list to command as parallel slurp redirection inputs
+options:
+   'slurp --help' for explanation of -s option
+arguments:
+   commandString   target system command with any options (required)
+   file(s)         list of inputs files (required)
+example:
+   glurp "sort -m" *.txt
+might execute on the system:
+   sort -m <(slurp file1.txt) <(slurp file2.txt) ...
+
+Note that the target command and all of its parameters must be fed to glurp as a single argument, which requires that all components be enclosed by "".  
+
+In theory one could create a similar multiple process redirection for output buffering, but it is uncommon for a stream to have multiple file outputs under the control of the user.  When an individual program writes many parallel file outputs, the program itself is almost always in control of file naming and writing and does not expose these functions to the user, and thus there is no way for slurp to gain access to the data streams for output buffering.  Accordingly, output glurping is not currently implemented.
+
+

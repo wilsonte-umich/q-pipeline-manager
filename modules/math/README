@@ -1,0 +1,42 @@
+
+Module 'math' contains utilities that execute various common
+math functions to help determine the jobs to be queued.  
+
+-------------------------------------------------------------------
+REQUIREMENTS
+-------------------------------------------------------------------
+
+Only standard Linux utilities are used by the math module.
+    
+-------------------------------------------------------------------
+integer.q
+-------------------------------------------------------------------
+
+Demand that a variable be an integer, otherwise throw an error at 
+submission time.
+
+Required variables:
+$VALUE     The value to test. Test multiple values using a list 
+           invocation.
+    
+Example:
+$VALUES    55 0 6.3
+invoke math/integer.q $VALUE $VALUES
+
+-------------------------------------------------------------------
+non_zero.q
+-------------------------------------------------------------------
+
+Demand that a variable not be zero, otherwise throw an error at 
+submission time.
+
+Required variables:
+$VALUE     The value to test. Test multiple values using a list 
+           invocation.
+    
+Example:
+$VALUES    55 0 6.3
+invoke math/non_zero.q $VALUE $VALUES
+
+
+

@@ -1,0 +1,32 @@
+#!/usr/bin/perl
+use strict;
+use warnings;
+
+my ($targetDir, $fileRoot, @statNames) = @ARGV;
+
+my $usage = "usage: get_stat <targetDir> <fileRoot> <statName> [...]\n";
+$usage .= "expects to find <targetDir>/<fileRoot>.stats.csv with <statName>,<statValue> per line\n";
+($targetDir and $fileRoot and $statNames[0]) or die "insufficient arguments specified\n$usage";
+
+my $newFormat = "$targetDir/$fileRoot.stats.csv";
+my $oldFormat = "$targetDir/$fileRoot\_stats.csv";
+my $statsFile = $newFormat;   # new formats stats file names are used first, if present
+unless(-e $statsFile){
+    $statsFile = $oldFormat;  # support use of old format stats file name, but only if already present
+    unless(-e $statsFile){
+        $statsFile = $newFormat;
+        die "could not find $statsFile\n$usage";
+    }
+}
+
+my $stats = qx/cat $statsFile/;
+my @statValues;
+foreach my $statName(@statNames){
+    $statName eq "" and next;
+    my $statValue = '$NULL';
+    $stats =~ m/\n$statName,(.*)\n/ and $statValue = $1;
+    $stats =~ m/^$statName,(.*)\n/ and $statValue = $1;
+    push @statValues, $statValue;
+}
+print join(" ", @statValues), "\n";
+

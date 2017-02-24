@@ -1,0 +1,54 @@
+-------------
+version 1.0.3
+-------------
+
+XXXXXX
+
+-------------
+version 1.0.2
+-------------
+
+Added modules capability = q instructions file sets/packages implicitly available to all pipelines
+    Added modules for file handling, genome handling, and others
+Added utilities = software called as a command in a worker script, designed with q workflows in mind
+    Added file slurping, stats management, and bedutil (similar to bedtools) utilities
+
+Improved file access speed by caching encountered files.
+Modified file search directories to include, in order:
+   master directory
+   current slave directory
+   q modules directory
+   current working directory (where q was called from)
+   absolute file path
+Added support for optional variables in conditionals (exitIF, etc) and ternary operator
+Added '#q option $VAR[XX]' directive to support optional variable in worker scripts
+Modified environment search directories to include, in order:
+    <qDirectory>/environment.<type>  (the q installation directory)
+    ~/.q/environment.<type>          (the user's .q direcory)
+    <masterDirectory>/../environment.<type>  (the master classes directory)
+    <masterDirectory>/environment.<type>     (the master directory)
+
+Bug fixes/minor performance changes:
+  - If invoke uses a variable already defined in master, master variable resets to prior value after invoke.
+  - Added a syntax error if preserve attempts to use a variable name in use in an invoke statement.
+  - Other miscelleneaous tweaks.
+ 
+-------------
+version 1.0.1
+-------------
+Minor feature additions:
+  - Added option -u,--no-update to the status command to allow rapid retrieval of job lists in-process.
+  - Add option -c,--chain to the status command to allow retrieval of job dependency chains.
+
+Bug fixes/minor performance changes:
+  - Replaced a non-standard dependency in snipStream and snipFile utilities.
+  - Lowered the job memory requirements on q_example jobs to 100M.
+  - Lowered the job memory requirements on protect and backup auto jobs to 500M.
+  - Removed an unnecessary status update called by report, script and environment commands.
+  - Added improved parsing to reporting of archived status lists.
+
+-------------
+version 1.0.0
+-------------
+The first public release of q.  Included support for SGE and PBS job schedulers on a server cluster, using both the command line and q remote web interfaces.
+

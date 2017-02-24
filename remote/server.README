@@ -1,0 +1,78 @@
+
+'server.pl' is the server version of q remote.  It is run by a web 
+server that you have installed on your job server.  Users access
+the interface by pointing their web browser at your job server.
+On each request, 'server.pl' gathers host information from 
+'serv.conf' and gathers project information from 
+'projects/<user>.projects', where <user> is the user name that
+a client provided when authenticating to your web server.
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+DISCLAIMER!!  q remote server has only been tested on a server running
+SGE.  It is possible that issues might arise for first installations 
+on a Torque PBS job server.  
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+INITIAL SETUP:
+
+It is beyond the scope of this README to provide detailed instructions
+on installing an appropriately secure web server on your job server.  
+Doing these things correctly and securely can be tricky and should only
+be attempted by an experienced system administrator.  
+
+The basic steps are:
+
+1) Install a web server - Apache httpd is recommended.
+
+2) Make your web server CGI-capable, for example mod_cgi under httpd.
+
+3) Install Perl and the Perl CGI module. 
+
+4) Under httpd, install mod_perl.  This is optional but highly
+recommended to speed up your q remote server, which is Perl-based
+and mod_perl compatible. 
+
+5) Protect your web page using an appropriately secure authentication
+and authorization challenge to users attempting to access your q remote 
+server, for example mod_auth_ldap under httpd.
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+CAUTION!!  Do NOT expose q remote via a web server on your job server 
+without appropriate authentication of users!!  You do so at your own  
+peril because any user with access to 'server.pl' on your job server 
+will be able to run jobs and shell commands on your server.
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+6) Understand that jobs submitted via q remote are run as the user assigned
+to your web server.  If you run just one web server, every user on your 
+system will be granted the same permissions.  Thus, a more robust
+installation will have many different httpd instances, for example one
+instance for every user group, where the web server user is part of that
+group and therefore inherits the group's permissions.  
+
+7) Edit the 'server.conf' configuration file, found in the same folder as
+this README file, following the instructions therein.  
+
+8) Establish a CGI URL path to the directory that contains the q remote
+'server.pl' file. Good practice is to simply call that path '/q/'.
+
+9) Establish a non-CGI URL path called 'q_images' at the same level as
+the final element of the path you created in 8).  For example, if your
+q path is '/my/q/', your image path should be '/my/q_images/'.  Make your
+image path point to the 'images' directory contained in the same directory
+as 'server.pl'.
+
+10) Start your web server.
+
+ON EACH USAGE:
+
+11) Users access your q remote server as follows:
+
+http://your.server/your/path/server.pl
+
+where the host and path details of the URL are determined by the specifics
+of your web server installation, for example it might be:
+
+http://cluster.myU.edu/q/server.pl
+
+

@@ -1,0 +1,16 @@
+
+The q utility is a platform for creating and managing data analysis pipelines.
+It expands the value of your existing job scheduler - either Grid Engine or 
+TORQUE PBS - through numerous functions that help you organize, submit, 
+monitor, manage and share your informatics work.
+
+See http://tewlab.org/q for more information about q and its usage.
+
+See the INSTALL file for help installing q.
+
+See remote/README for information about q's remote web interface.
+
+See example/README for information about the example pipeline built into q.
+
+Your use of this software is subject to the license found in the LICENSE file.
+

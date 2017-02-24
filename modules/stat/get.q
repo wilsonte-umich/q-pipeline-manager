@@ -1,0 +1,5 @@
+
+$STAT_VALUE run get_stat $TARGET_DIR $FILE_ROOT $STAT_NAME
+
+preserve $$STAT_NAME $STAT_VALUE
+

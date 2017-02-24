@@ -1,0 +1,42 @@
+
+Module 'genome/lib' has scripts called internally by 'genome' - these are not 
+called by an end user.
+    
+-------------------------------------------------------------------
+get.sh
+-------------------------------------------------------------------
+
+Download genome reference files from UCSC.
+
+-------------------------------------------------------------------
+fasta.sh
+-------------------------------------------------------------------
+
+Create and index a single FASTA file containing only the canonical chromosomes,
+and index the RefSeq mRNA FASTA file, if present.
+
+-------------------------------------------------------------------
+gap.sh
+-------------------------------------------------------------------
+
+Create a BED file containing the genome gaps.
+
+-------------------------------------------------------------------
+transcripts.sh
+-------------------------------------------------------------------
+
+Create a BED file of transcript spans.
+
+-------------------------------------------------------------------
+genes.sh
+-------------------------------------------------------------------
+
+Create a BED file of gene spans.
+
+-------------------------------------------------------------------
+map.pl
+-------------------------------------------------------------------
+
+Create collapsed stranded and unstranded transcriptome maps.  See script
+for details.
+
