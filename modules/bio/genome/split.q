@@ -11,12 +11,13 @@ $SPLIT_PREFIX $GENOMES_DIR/$GENOME/$GENOME.split.$NAME
 
 # output information
 $IS_FASTA run [ "$OUTPUT_TYPE" = "FASTA" ] && echo 1
+$SUFFIX   $IS_FASTA ? fa : bed
 $IS_FASTA $IS_FASTA ? $IS_FASTA : 0
 $IS_BED   run [ "$OUTPUT_TYPE" = "BED" ] && echo 1
 $IS_BED   $IS_BED ? $IS_BED : 0
 $CHECK_SUM run echo \$(($IS_FASTA + $IS_BED))
 dieIf    run [ "$CHECK_SUM" = "0" ] && echo "Unrecognized \$OUTPUT_TYPE"
-$OUT_FILE $IS_FASTA ? $SPLIT_PREFIX.fa : $SPLIT_PREFIX.bed
+$OUT_FILE $SPLIT_PREFIX.$SUFFIX 
 
 # process chromosomes
 qsub lib/split_chrom.pl $CHROMOSOME $CHROMOSOMES

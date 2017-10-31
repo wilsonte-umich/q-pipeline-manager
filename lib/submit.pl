@@ -72,6 +72,8 @@ sub followInstructions {  # execute jobs in the required order
     my $needAutoUnprotect = needAutoUnprotect();
     addAutoJob($needAutoUnprotect, 'unprotect', '500', '1:00:00', '-w u'); # remove write protection *before* running user jobs 
     initializeAutoThread('main');
+    my $QMF = '__Q_MASTER_FILE__';
+    $variables{$QMF} = $ENV{$QMF} = $masterFile; # expose master script name to every job it queues
     executeInstructions($masterFile); 
     initializeAutoThread('post');
     addAutoJob($needAutoProtect, 'protect', '500', '1:00:00'); # add write protection *after* running user jobs
@@ -80,12 +82,12 @@ sub followInstructions {  # execute jobs in the required order
 }
 sub provideFeedback {  # exit feedback
     if ($options{'dry-run'}){
-        print "no syntax errors detected\n";
+        print "\nno syntax errors detected\n";
     } elsif($jobsAdded) {  
         generateStatusFile(); # generate disk copy of queued jobs
-        print "all jobs queued\n";  
+        print "\nall jobs queued\n";  
     } else {
-        print "no jobs to queue\n";  
+        print "\nno jobs to queue\n";  
     } 
 }
 #========================================================================

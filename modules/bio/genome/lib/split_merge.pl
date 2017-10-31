@@ -8,12 +8,10 @@ use Cwd(qw(abs_path));
 #$    -N  split.$GENOME.merge.$NAME
 #$    -wd $GENOME_DIR
 #$    -l  vf=2G
-#$    -l  h_rt=5:00:00
 
 #PBS  -N  split.$GENOME.merge.$NAME
 #PBS  -d  $GENOME_DIR
 #PBS  -l  mem=2gb
-#PBS  -l  walltime=5:00:00
 
 # define variables
 my $genomeDir = $ENV{GENOME_DIR};
