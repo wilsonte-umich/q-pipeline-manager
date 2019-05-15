@@ -59,9 +59,16 @@ chomp $timePath;
 # get time version and adjust memory correction accordingly
 #------------------------------------------------------------------------
 print ".";
-my $timeVersion = qx|$timePath --version 2>&1|; 
-chomp $timeVersion; 
-($timeVersion and $timeVersion =~ s/GNU time //) or die "$timePath is not a valid installation of the GNU time utility\n";    
+my $timeError = "$timePath is not a valid installation of the GNU time utility\n";
+my $timeVersion = qx/$timePath --version 2>&1 | head -n1/; 
+chomp $timeVersion;
+$timeVersion =~ m/GNU/ or die $timeError;
+$timeVersion =~ m/time/ or die $timeError; 
+my @tvf = split(/\s+/, $timeVersion);
+$timeVersion = $tvf[$#tvf];
+$timeVersion or die $timeError;  
+$timeVersion eq "UNKNOWN" and $timeVersion = 1.8;
+#($timeVersion and $timeVersion =~ s/GNU time //) or die "$timePath is not a valid installation of the GNU time utility\n";    
 my $memoryCorrection = $timeVersion > 1.7 ? 1 : 4; # for time <= v1.7, account for the known bug that memory values are 4-times too large
 my $memoryMessage = $timeVersion > 1.7 ? "" : "q: !! maxvmem value above is 4-fold too high due to known bug in GNU time utility !!"; 
 #------------------------------------------------------------------------
