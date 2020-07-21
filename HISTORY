@@ -15,8 +15,8 @@ Added utilities = software called as a command in a worker script, designed with
 
 Improved file access speed by caching encountered files.
 Modified file search directories to include, in order:
-   master directory
-   current slave directory
+   data_script directory
+   current action_script directory
    q modules directory
    current working directory (where q was called from)
    absolute file path
@@ -25,11 +25,11 @@ Added '#q option $VAR[XX]' directive to support optional variable in worker scri
 Modified environment search directories to include, in order:
     <qDirectory>/environment.<type>  (the q installation directory)
     ~/.q/environment.<type>          (the user's .q direcory)
-    <masterDirectory>/../environment.<type>  (the master classes directory)
-    <masterDirectory>/environment.<type>     (the master directory)
+    <dataScriptDirectory>/../environment.<type>  (the data_script classes directory)
+    <dataScriptDirectory>/environment.<type>     (the data_script directory)
 
 Bug fixes/minor performance changes:
-  - If invoke uses a variable already defined in master, master variable resets to prior value after invoke.
+  - If invoke uses a variable already defined in script, it resets to prior value after invoke.
   - Added a syntax error if preserve attempts to use a variable name in use in an invoke statement.
   - Other miscelleneaous tweaks.
  

@@ -15,8 +15,8 @@ Perform a quick check for appropriate installation by calling q with no commands
 
     q version #.#.#
     q is a utility for submitting, monitoring and managing data analysis pipelines
-    usage:  q <command> [options] <masterFile> [...]
-    masterFile = path to a master instructions file
+    usage:  q <command> [options] <data_script > [...]
+    data_script  = path to a top-level q instructions file specifying data targets
     use 'q --help' or 'q <command> --help' for extended help
  
 In most cases you will want to add ‘/path/to/some/folder/q-<#.#.#>’ to your server 

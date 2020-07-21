@@ -34,29 +34,29 @@ my %allowedQTypes = (all=>[{0=>1,SGE=>1,PBS=>1}],  # not all commands apply to a
                      sch=>[{SGE=>1,PBS=>1}, "requires either the SGE or PBS job schedulers"], 
                      SGE=>[{SGE=>1},        "does not apply to the PBS job scheduler"]);
 my %commands = (  # [executionSub, allowedQTypes, commandHelp]
-    submit      =>  [\&qSubmit,     $allowedQTypes{all}, "queue all jobs specified by the instructions in masterFile"],      
-    extend      =>  [\&qExtend,     $allowedQTypes{all}, "queue only new or deleted jobs specified by masterFile"],   
-    resubmit    =>  [\&qResubmit,   $allowedQTypes{sch}, "submit identical copies of jobs previously queued by masterFile"],   
+    submit      =>  [\&qSubmit,     $allowedQTypes{all}, "queue all jobs specified by the instructions in data_script"],      
+    extend      =>  [\&qExtend,     $allowedQTypes{all}, "queue only new or deleted jobs specified by data_script"],   
+    resubmit    =>  [\&qResubmit,   $allowedQTypes{sch}, "submit identical copies of jobs previously queued by data_script"],   
 #------------------------------------------------------------------------------------------------------------
-    status      =>  [\&qStatus,     $allowedQTypes{all}, "update and show the status of jobs queued by masterFile"],
-    report      =>  [\&qReport,     $allowedQTypes{all}, "show the log file of a job queued by masterFile"],
-    script      =>  [\&qScript,     $allowedQTypes{all}, "show the parsed target script for a job queued by masterFile"],
-    environment =>  [\&qEnvironment,$allowedQTypes{all}, "show the environment variables passed to a job queued by masterFile"],
+    status      =>  [\&qStatus,     $allowedQTypes{all}, "update and show the status of jobs queued by data_script"],
+    report      =>  [\&qReport,     $allowedQTypes{all}, "show the log file of a job queued by data_script"],
+    script      =>  [\&qScript,     $allowedQTypes{all}, "show the parsed target script for a job queued by data_script"],
+    environment =>  [\&qEnvironment,$allowedQTypes{all}, "show the environment variables passed to a job queued by data_script"],
 #------------------------------------------------------------------------------------------------------------
-    clear       =>  [\&qClear,      $allowedQTypes{SGE}, "remove error states from jobs queued by masterFile (SGE only)"], 
-    delete      =>  [\&qDelete,     $allowedQTypes{sch}, "kill (qdel) incomplete jobs queued by masterFile"],
+    clear       =>  [\&qClear,      $allowedQTypes{SGE}, "remove error states from jobs queued by data_script (SGE only)"], 
+    delete      =>  [\&qDelete,     $allowedQTypes{sch}, "kill (qdel) incomplete jobs queued by data_script"],
 #------------------------------------------------------------------------------------------------------------
-    lock        =>  [\&qLock,       $allowedQTypes{all}, "set a protective marker that prevents job actions from masterFile"],
+    lock        =>  [\&qLock,       $allowedQTypes{all}, "set a protective marker that prevents job actions from data_script"],
     unlock      =>  [\&qUnlock,     $allowedQTypes{all}, "remove the protective marker set by 'q lock'"],    
     archive     =>  [\&qArchive,    $allowedQTypes{all}, "save a replicate of the current status file"], 
     rollback    =>  [\&qRollback,   $allowedQTypes{all}, "revert pipeline to the most recently archived status file"],
-    purge       =>  [\&qPurge,      $allowedQTypes{all}, "remove all status, script and log files created by masterFile"],   
-    move        =>  [\&qMove,       $allowedQTypes{all}, "move/rename masterFile and its associated q-generated derivative files"],
+    purge       =>  [\&qPurge,      $allowedQTypes{all}, "remove all status, script and log files created by data_script"],   
+    move        =>  [\&qMove,       $allowedQTypes{all}, "move/rename data_script and its associated q-generated derivative files"],
 #------------------------------------------------------------------------------------------------------------
-    protect     =>  [\&qProtect,    $allowedQTypes{all}, "write-protect (chmod a-w) files identified as 'protect <fileGlob>' in masterFile"],
+    protect     =>  [\&qProtect,    $allowedQTypes{all}, "write-protect (chmod a-w) files identified as 'protect <fileGlob>' in data_script"],
     unprotect   =>  [\&qUnprotect,  $allowedQTypes{all}, "remove file write-protection for --who (chmod <--who>+w)"],
-    backup      =>  [\&qBackup,     $allowedQTypes{all}, "create a copy of directories identified as 'backup <directory>' in masterFile"],
-    restore     =>  [\&qRestore,    $allowedQTypes{all}, "restore from backup directories identified as 'backup <directory>' in masterFile"],
+    backup      =>  [\&qBackup,     $allowedQTypes{all}, "create a copy of directories identified as 'backup <directory>' in data_script"],
+    restore     =>  [\&qRestore,    $allowedQTypes{all}, "restore from backup directories identified as 'backup <directory>' in data_script"],
 #------------------------------------------------------------------------------------------------------------
     publish     =>  [\&qPublish,    $allowedQTypes{all}, "create a distribution of instruction, script, status, and log files"], 
 ); 
@@ -73,7 +73,7 @@ our %optionInfo = (# [shortOption, valueString, optionGroup, groupOrder, optionH
     'delete'=>      ["x", undef,   "submit",  2, "kill matching pending/running jobs when repeat job submissions are encountered"],    
     'execute'=>     ["e", undef,   "submit",  3, "run target jobs immediately in shell instead of submitting with qsub"],   
     'force'=>       ["f", undef,   "submit",  4, "suppress warnings that duplicate jobs will be queued, files deleted, etc."],  
-    'verbose'=>     ["V", undef,   "submit",  5, "report all commands acted on from masterFile (extremely verbose)"],    
+    'verbose'=>     ["V", undef,   "submit",  5, "report all commands acted on from data_script (extremely verbose)"],    
 #------------------------------------------------------------------------------------------------------------
     'archive'=>     ["a", undef,   "status",  0, "show the most recent archive instead of the current status"], 
     'no-update'=>   ["u", undef,   "status",  1, "suppress the status update, just show the most recently recorded status"],   
@@ -97,8 +97,8 @@ our %optionInfo = (# [shortOption, valueString, optionGroup, groupOrder, optionH
 #------------------------------------------------------------------------------------------------------------  
     'count'=>       ["N", "<int>", "rollback",0, "number of sequential rollbacks to perform [1]"],  
 #------------------------------------------------------------------------------------------------------------  
-    'lock'=>        ["K", undef,   "auto",    0, "automatically lock masterFile after queuing jobs from it"],  
-    'publish'=>     ["H", undef,   "auto",    1, "automatically add 'q publish' job after masterFile jobs are queued"],
+    'lock'=>        ["K", undef,   "auto",    0, "automatically lock data_script after queuing jobs from it"],  
+    'publish'=>     ["H", undef,   "auto",    1, "automatically add 'q publish' job after data_script jobs are queued"],
 #------------------------------------------------------------------------------------------------------------
     'quiet'=>       ["q", undef,   "protect", 0, "do not show the names of files being (un)protected, backed up or restored"],    
     'who'=>         ["w", "<str>", "protect", 1, "list of classes to unprotect, consistent with chmod <--who>+w (e.g. a, u, or g)"],
@@ -110,7 +110,7 @@ our %optionInfo = (# [shortOption, valueString, optionGroup, groupOrder, optionH
     'out-dir'=>     ["o", "<str>", "publish", 4, "publish output directory (overridden by 'publishDir' instructions)"],
     'zip'=>         ["z", undef,   "publish", 5, "create a tarball (.tar.gz) of the publication report"],
 #------------------------------------------------------------------------------------------------------------
-    'move-to'=>     ["M", "<str>", "move",    1, "the file or directory to which masterFile will be moved"],
+    'move-to'=>     ["M", "<str>", "move",    1, "the file or directory to which data_script will be moved"],
 #------------------------------------------------------------------------------------------------------------
     '_suppress-echo_'=>["NA", undef,   "NA", "NA", 0, "internalOption"], 
     '_extending_'=>    ["NA", undef,   "NA", "NA", 0, "internalOption"], 
@@ -287,11 +287,11 @@ sub checkRequiredOptions { # make sure required value options have been supplied
 }
 #-----------------------------------------------------------------------
 sub checkMasterFile { # make sure master instructions file was specified and exists
-    $masterFile or reportUsage("masterFile not specified", undef, 1);
+    $masterFile or reportUsage("data_script not specified", undef, 1);
     !(-e $masterFile) and $masterFile eq 'q_example.q' and $masterFile = "$qDir/example/q_example.q";
-    -e $masterFile or reportUsage("could not find masterFile $masterFile", undef, 1);
+    -e $masterFile or reportUsage("could not find data_script $masterFile", undef, 1);
     $masterFile = abs_path($masterFile);  # convert all relative paths to completes master paths
-    $masterFile =~ m|(.*)/(.+)$| or die "checkMasterFile: error parsing masterFile\n"; 
+    $masterFile =~ m|(.*)/(.+)$| or die "error parsing data_script\n"; 
     ($masterDir, $masterFileName) = ($1, $2);
     $qDataDir = "$masterDir/.$masterFileName.data";  # q data for masterFile stored in single, portable hidden directory  
     $makeDirs = !(-d $qDataDir);
@@ -352,8 +352,8 @@ sub executeCommand { # load q scripts and execute command
 sub reportUsage { 
     my ($message, $command, $die) = @_;
     $message and print "$message\n";  
-    print "usage:\tq <command> [options] <masterFile> [...]\n",   
-          "masterFile = path to a master instructions file\n";
+    print "usage:\tq <command> [options] <data_script> [...]\n",   
+          "data_script = path to a top-level q instructions file specifying data targets\n";
     if($command){
         if($commands{$command}){ # help for options for known command
             reportOptionHelp($command);
