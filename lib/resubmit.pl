@@ -98,7 +98,10 @@ sub parseResubmitScript {
         } elsif($line =~ m|^(#\$\s+-hold_jid\s+)(\S+)|){  # SGE dependency line
             $line = replaceDependencies($1, $2, ",", $haveDependencies, \@newJobIDs); 
             $haveDependencies = 1; 
-        }   
+        } elsif($line =~ m|^(#SBATCH\s+--depend=afterok:)(\S+)|){  # Slurm dependency line
+            $line = replaceDependencies($1, $2, ":", $haveDependencies, \@newJobIDs); 
+            $haveDependencies = 1; 
+        }
         push @outScriptLines, $line;        
         ($line =~ m/^#PBS/ or $line =~ m/^#\$/) and push @directives, $line;
     }

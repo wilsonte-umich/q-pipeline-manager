@@ -430,21 +430,25 @@ sub getJobStates { #retrieve job states for jobs in queue or running
         $qstat = qx|$schedulerDir/qstat -u '*'|; 
     } elsif($qType eq 'PBS') {
         $qstat = qx|$schedulerDir/qstat|;
+    } elsif($qType eq 'slurm') {
+        $qstat = qx|$schedulerDir/squeue|;
     }
     $qstat or return;    
     my @qstat = split("\n", $qstat);
-    $qstat[2] or return; 
-    my @jobs = @qstat[2..$#qstat];
-    for my $job(@jobs){ #SGE and PBS qstat formats are similar enough to use same parsing
+    my $firstJobI = $qType eq 'slurm' ? 1 : 2;
+    $qstat[$firstJobI] or return; 
+    my @jobs = @qstat[$firstJobI..$#qstat];
+    my $stateI = $qType eq 'slurm' ? 5 : 4;
+    for my $job(@jobs){ #qstat/squeue formats are similar enough to use same parsing
         $job =~ m/^\s*(.*)$/; #strip leading white space
         $job = $1;
         my @fields = split(/\s+/, $job);
         $fields[0] =~ m/^(\d+)/; 
-        my $jobID = $1;
-        my $state = $fields[4];
+        my $jobID = $1;        
+        my $state = $fields[$stateI];
         $$jobStates{$jobID} = $state;
     }   
-}
+} 
 sub getJobStatus{ # expects that getJobStates has already been called
     my ($jobName, $jobID, $jobStates, $jobInfo, $justDeleted, $array, $qType) = @_;
     $jobID or return;    
@@ -459,6 +463,11 @@ sub getJobStatus{ # expects that getJobStates has already been called
             $$jobInfo{start_time} or $$jobInfo{start_time} = '';
             $$jobInfo{exit_status} = $$jobStates{$jobID}; # place queue status into exit_status while job is in queue            
             $$jobInfo{walltime} = '';  # walltime not available in SGE qstat   
+        } elsif($qType eq 'slurm'){
+            getSlurmJobInfo($jobID, $jobInfo);
+            getLogFileInfo($jobName, $jobID, $jobInfo, $array, $qType, 1);  # get just the start time from the log file
+            $$jobInfo{start_time} or $$jobInfo{start_time} = '';
+            $$jobInfo{exit_status} = $$jobStates{$jobID}; # place queue status into exit_status while job is in queue             
         } else { # PBS maintains qstat return for some variable time; job state tells whether job is truly completed
             if($$jobStates{$jobID} eq 'C'){ # completed jobs; get info from log file
                 getLogFileInfo($jobName, $jobID, $jobInfo, $array, $qType);
@@ -468,7 +477,7 @@ sub getJobStatus{ # expects that getJobStates has already been called
                 $$jobInfo{start_time} or $$jobInfo{start_time} = '';
                 $$jobInfo{exit_status} = $$jobStates{$jobID}; # place queue status into exit_status while job is in queue
             }          
-        }  
+        }
     } else { # completed jobs; get info from log file
         getLogFileInfo($jobName, $jobID, $jobInfo, $array, $qType);
     }
@@ -555,6 +564,25 @@ sub getSgeJobInfo { # retrieve detailed information on a queued or running SGE j
         $$jobInfo{maxvmem} = $1 * (10**$exp{$2});   
         $$jobInfo{maxvmem} = int($$jobInfo{maxvmem}/1E6+0.5)/1E3."G"; 
     }          
+}
+#========================================================================
+
+#========================================================================
+# interface with Slurm for queued or running jobs
+#------------------------------------------------------------------------
+sub getSlurmJobInfo { # retrieve detailed information on a queued or running Slurm job
+    my ($jobID, $jobInfo) = @_;
+    my $seff = qx|seff $jobID|;
+    $seff or return;
+    $$jobInfo{walltime} = $seff =~ m/Job Wall-clock time\: (\S+)/  ? $1 : "";
+    $$jobInfo{maxvmem}  = $seff =~ m/Memory Utilized\: (\S+)/  ? $1 : "";
+    #Job Wall-clock time: 00:00:35
+    #Memory Utilized: 0.00 MB (estimated maximum)
+    my %exp = (KB=>3,MB=>6,GB=>9); # change memory readout to G for status display 
+    if($$jobInfo{maxvmem} and $$jobInfo{maxvmem} =~ m/^(\d+\.*\d*) ((KB|MB|GB))$/){   
+        $$jobInfo{maxvmem} = $1 * (10**$exp{$2});   
+        $$jobInfo{maxvmem} = int($$jobInfo{maxvmem}/1E6+0.5)/1E3."G"; 
+    } 
 }
 #========================================================================
 

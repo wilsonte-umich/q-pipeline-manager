@@ -92,8 +92,8 @@ sub getArrayTaskLogFile {
 sub getArrayJobDelimiter {
     my ($qType) = @_;
     if($qType eq 'SGE') {
-        return ".";     
-    } elsif($qType eq 'PBS') {
+        return ".";
+    } elsif($qType eq 'PBS' or $qType eq 'slurm') {
         return "-";
     } else {
         die "getArrayJobDelimiter error: array jobs are not allowed for qType 'local'\n";

@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 use Cwd(qw(abs_path));
-			
+
 #========================================================================
 # 'main.pl' is the q command-line interpreter and help generator
 #========================================================================
@@ -30,8 +30,8 @@ my %useOptionGroupDelimiter = (submit=>1, extend=>1, resubmit=>1);  # break long
 #------------------------------------------------------------------------
 # q commands
 #------------------------------------------------------------------------
-my %allowedQTypes = (all=>[{0=>1,SGE=>1,PBS=>1}],  # not all commands apply to all job schedulers
-                     sch=>[{SGE=>1,PBS=>1}, "requires either the SGE or PBS job schedulers"], 
+my %allowedQTypes = (all=>[{0=>1,SGE=>1,PBS=>1,slurm=>1}],  # not all commands apply to all job schedulers
+                     sch=>[{SGE=>1,PBS=>1,slurm=>1}, "requires either the SGE or PBS job schedulers"], 
                      SGE=>[{SGE=>1},        "does not apply to the PBS job scheduler"]);
 my %commands = (  # [executionSub, allowedQTypes, commandHelp]
     submit      =>  [\&qSubmit,     $allowedQTypes{all}, "queue all jobs specified by the instructions in data_script"],      
@@ -303,12 +303,12 @@ sub checkMasterFile { # make sure master instructions file was specified and exi
     $statusFile = "$qDataDir/$masterFileName.status";  # status file lives in top-level hidden directory
     $archiveStem = "$archiveDir/$masterFileName.status";
 }
-sub getQSubDir {  # subdirectories hold specific q-generated files
+sub getQSubDir { # subdirectories hold specific q-generated files
     my ($dirName, $makeSubDirs) = @_;
     my $dir = "$qDataDir/$dirName";
     $makeDirs and mkdir $dir;
-    if($makeDirs and $makeSubDirs){  # job-level files placed into further subdirectories by qType
-        foreach my $qType(qw(PBS SGE local)){
+    if($makeDirs and $makeSubDirs){  # job files placed in subdirectories by execution synchronicity
+        foreach my $qType(qw(local SGE PBS slurm)){
             my $qTypeDir = "$dir/$qType";
             -d $qTypeDir or mkdir $qTypeDir;
         }

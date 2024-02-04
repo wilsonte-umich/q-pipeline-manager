@@ -9,7 +9,7 @@ use Cwd(qw(getcwd abs_path));
 #========================================================================
 # define variables
 #------------------------------------------------------------------------
-use vars qw($qDir $qType $schedulerDir %options %optionInfo %commandOptions   
+use vars qw($qDir $qType $schedulerDir $submitTarget %options %optionInfo %commandOptions   
             %protectFileGlobs %backupDirs @instrsTree $memoryMessage $bashPath $timePath
             $masterFile $masterDir $masterFileName $statusFile $logDir $modulesDir);
 my ($runDir, $ovrideJobName, $ovrideRunDir, $isJobNameTag, $isRunDirTag,
@@ -43,13 +43,13 @@ sub qSubmit {
     checkDeleteExtend();
     checkSyntax('submit');
     followInstructions();
-    setAutoUnprotect();
+    # setAutoUnprotect();
     provideFeedback();  
 }
 #------------------------------------------------------------------------
 sub checkScheduler {  # make sure there will be a way to run requested jobs
     $qInUse = $options{'execute'} ? 'local' : $qType;
-    $qInUse or die "job submission requires either Sun Grid Engine (SGE), Torque/PBS, or option --execute\n";
+    $qInUse or die "job submission requires either Sun Grid Engine (SGE), Torque/PBS, Slurm, or option --execute\n";
 }
 sub checkSyntax {  # check syntax in dry-run before submitting any jobs
     my ($command) = @_;
@@ -70,15 +70,15 @@ sub followInstructions {  # execute jobs in the required order
     executeInstructions( getEnvFiles('q') );  # environment files always acted on first
     initializeAutoThread('pre');
     my $needAutoUnprotect = needAutoUnprotect();
-    addAutoJob($needAutoUnprotect, 'unprotect', '500', '1:00:00', '-w u'); # remove write protection *before* running user jobs 
+    # addAutoJob($needAutoUnprotect, 'unprotect', '500', '1:00:00', '-w u'); # remove write protection *before* running user jobs 
     initializeAutoThread('main');
     my $QMF = '__Q_MASTER_FILE__';
     $variables{$QMF} = $ENV{$QMF} = $masterFile; # expose master script name to every job it queues
     executeInstructions($masterFile); 
     initializeAutoThread('post');
-    addAutoJob($needAutoProtect, 'protect', '500', '1:00:00'); # add write protection *after* running user jobs
-    addAutoJob($needAutoBackup, 'backup', '500', '10:00:00');  # add output archiving *after* running user jobs
-    addAutoJob($options{publish}, 'publish', '500', '1:00:00', getPassedAutoOptions('publish')); # publish pipeline *after* running user jobs  
+    # addAutoJob($needAutoProtect, 'protect', '500', '1:00:00'); # add write protection *after* running user jobs
+    # addAutoJob($needAutoBackup, 'backup', '500', '10:00:00');  # add output archiving *after* running user jobs
+    # addAutoJob($options{publish}, 'publish', '500', '1:00:00', getPassedAutoOptions('publish')); # publish pipeline *after* running user jobs  
 }
 sub provideFeedback {  # exit feedback
     if ($options{'dry-run'}){
@@ -611,8 +611,6 @@ sub getFileModuleCache {  # retrieve from the cache of file module lookups
 #========================================================================
 
 #========================================================================
-
-
 # submission-time execution of shell commands
 #------------------------------------------------------------------------
 sub runImmediately { # when instructed, run simple action commands immediately in q submit shell
@@ -687,7 +685,7 @@ sub queueScript { # the point of it all - commit target scripts for execution
     my ($currentThread, $genericLine, @args) = @_;
     my ($inScript, $arguments);
     ($inScript, $qsubOptions, $arguments) = parseQsubArguments($genericLine, @args);
-    $qsubOptions =~ m/-V/ or  $qsubOptions .= " -V"; # ensure that all environment variables are passed to qsub job
+    $qInUse eq 'slurm' or $qsubOptions =~ m/-V/ or $qsubOptions .= " -V"; # ensure that all environment variables are passed to qsub job
     $qInUse and $qInUse eq 'SGE' and $qsubOptions .= " -terse"; # causes SGE to return only the job ID as output
     %directives = ();
     $jobName = $qsubOptions =~ m/-N\s+(\S+)/ ? $1 : undef; # jobName specified by calling qsub line takes precedence
@@ -743,7 +741,9 @@ sub readInScript { # then read and parse target script
         $scriptLine =~ s/\r//g;
         if($isEnv){ # environment scripts only pass non-blank non-comment lines (directives are passed)
             $scriptLine =~ m/\S/ or next;
-            if($scriptLine =~ m/^#/){ $scriptLine =~ m/^#(\!|q|\$|PBS)/ or next};
+            if($scriptLine =~ m/^#/){ 
+                $scriptLine =~ m/^#(\!|q|\$|PBS|SBATCH)/ or next
+            };
         }  
         replaceDirectiveVars(\$scriptLine, $inScript, $scriptLine);
         processScriptLine(\$scriptLine, $inScript, $command) or return;
@@ -780,7 +780,7 @@ sub getInscript {
 }
 sub replaceDirectiveVars { # allow job scheduler directives to use variable values inherited from q
     my ($scriptLine, $inScript, $genericLine) = @_;
-    if($$scriptLine =~ m/^#(\$|PBS)\s+\S+/){
+    if($$scriptLine =~ m/^#(\$|PBS|SBATCH)\s+\S+/){
         while($$scriptLine =~ m/\$(\w+)/){ 
             my $varName = $1; 
             my $varValue = $variables{$varName};
@@ -807,24 +807,30 @@ sub processScriptLine { # act on directives in environment and target scripts
         processInstruction($1, $inScript) or return;      
     } elsif($$scriptLine =~ m/^#q\s+.+/){ # fail on all other attempted q directives
         die "unknown q directive in line:\n$$scriptLine\n";
-    } elsif($$scriptLine =~ m/^(#\$\s+-wd\s+)(.+)/ or $$scriptLine =~ m/^(#PBS\s+-d\s+)(.+)/){ # collect requested execution Directory
+    } elsif($$scriptLine =~ m/^(#\$\s+-wd\s+)(.+)/ or  # collect requested execution Directory
+            $$scriptLine =~ m/^(#PBS\s+-d\s+)(.+)/ or
+            $$scriptLine =~ m/^(#SBATCH\s+--chdir=)(.+)/){
         if($ovrideRunDir){ $$scriptLine = "$1$runDir" } else { $runDir = $2 }
-        $isRunDirTag = 1; 
-    } elsif($$scriptLine =~ m/^(#\$\s+-N\s+)(.+)/ or $$scriptLine =~ m/^(#PBS\s+-N\s+)(.+)/){ # collect job name specified in script
+        $isRunDirTag = 1;
+    } elsif($$scriptLine =~ m/^(#\$\s+-N\s+)(.+)/ or   # collect job name specified in script
+            $$scriptLine =~ m/^(#PBS\s+-N\s+)(.+)/ or
+            $$scriptLine =~ m/^(#SBATCH\s+--job-name=)(.+)/){
         if($ovrideJobName){ $$scriptLine = "$1$jobName" } else { $jobName = $2 }
         $isJobNameTag = 1;
-    } elsif($$scriptLine =~ m/^#\$\s+-t\s+(.+)/ or $$scriptLine =~ m/^#PBS\s+-t\s+(.+)/){ # determine if this is an array job
-        #$array = 1;  # versions prior to 0.4.0 used simple boolean to indicate an array job
-        $array = getArrayTaskIDs($1, $scriptLine);  # later version collect the complete set of array task IDs
+    } elsif($$scriptLine =~ m/^#\$\s+-t\s+(.+)/ or     # determine if this is an array job
+            $$scriptLine =~ m/^#PBS\s+-t\s+(.+)/ or 
+            $$scriptLine =~ m/^(#SBATCH\s+--array=)(.+)/){
+        $array = getArrayTaskIDs($1, $scriptLine);  # collect the complete set of array task IDs
     } elsif($$scriptLine =~ m/^#!(.+)/){ # manage qsub target shebang line
         $shebang = $1;  
         -x $shebang or die "unrecognized program target in shebang line:\n$$scriptLine";
         if($shebang =~ m/bash$/){ $directives{'!'} = $shebang } else { $isBash = undef }
         $$scriptLine = undef;
     } 
-    my %disallowedOptions = map { $_ => 1 } qw(j o e);  # output path directives must be set by q! 
-    if(defined $$scriptLine and $$scriptLine =~ m/^#(\$|PBS)\s+-(\S+)/){ 
-        my ($qTag, $option) = ($1, $2);  # keep track of directives to allow them to be nicely ordered at the top of the script
+    my %disallowedOptions = map { $_ => 1 } qw(j o e output error);  # output path directives must be set by q! 
+    if(defined $$scriptLine and $$scriptLine =~ m/^#(\$|PBS|SBATCH)\s+-+(\S+)/){ 
+        my @option = split("=", $2);
+        my ($qTag, $option) = ($1, $option[0]);  # keep track of directives to allow them to be nicely ordered at the top of the script
         if($disallowedOptions{$option}){
             push @{$directives{$qTag}}, "# directive overridden by q:  $$scriptLine";
         } else {
@@ -832,7 +838,7 @@ sub processScriptLine { # act on directives in environment and target scripts
         }   
         $$scriptLine = undef;  
     }     
-    return 1;                                   
+    return 1;
 }
 sub getArrayTaskIDs {  # determine the task IDs that will be generated by an array job
     my ($tOption, $scriptLine) = @_;
@@ -856,7 +862,6 @@ sub getArrayTaskIDs {  # determine the task IDs that will be generated by an arr
     for (my $i = $start; $i <= $end; $i += $step){ push @taskIDs, $i }
     return join(",", @taskIDs);  # task IDs stored as comma-delimited list
 }    
-
 sub checkRequiredVars { # when user provides variable syntax requirements, make sure called q files have specified them
     my ($inScript, $requiredVars, $command) = @_; 
     $requiredVars =~ s/,//g;
@@ -907,10 +912,18 @@ sub compressScriptLine { # minimize script line to its essential elements for co
 sub finalizeOutScript { # assemble the final script for this job using information from qsub options and environment and target scripts
     my ($outScriptLines, $inScriptPath, $isVirtual, $arguments) = @_; # assemble in reverse so that commands are stacked on top of use script lines
     processEmbeddedTarget($outScriptLines, $inScriptPath, $isVirtual, $arguments); 
-    addDirectives('PBS', 'd', 'N', 'W', undef, 'depend=afterok:'); # put together and organize the complete set of scheduler directives
-    addDirectives('$', 'wd', 'N', 'hold_jid', 1, ''); 
-    $directives = assembleDirectives('PBS')."\n";
-    $directives .= assembleDirectives('$');
+    addDirectives('PBS', 
+                  'd',  'N', 
+                  'W', undef, 'depend=afterok:'); # put together and organize the complete set of scheduler directives
+    addDirectives('$',   
+                  'wd', 'N', 
+                  'hold_jid', 1, '');
+    addDirectives('SBATCH', 
+                  'chdir', 'job-name', 
+                  'dependency', undef, 'afterok:');
+    $directives  = "\n".assembleDirectives('PBS')."\n";
+    $directives .= assembleDirectives('$')."\n";
+    $directives .= assembleDirectives('SBATCH')."\n";
     unshift @$outScriptLines, $directives; # place one copy of the directives in target script for future reference (these aren't actually read by qsub)
     $directives{'q'} and unshift @$outScriptLines, "#q ".join("\n#q ", @{$directives{q}}); # q directives
     unshift @$outScriptLines, "getTaskID\n";                         # collect TASK_ID on user's behalf by default; must occur before q requires    
@@ -938,14 +951,16 @@ sub processEmbeddedTarget{  # replace script contents with a call to non-bash sc
 }
 sub addDirectives { # include directives established by q = runDir, jobName, dependencies
     my ($qTag, $runDirOption, $jobNameOption, $dependOption, $dependSubsDiv, $dependPrefix) = @_; 
-    $isRunDirTag or  push @{$directives{$qTag}}, "#$qTag -$runDirOption $runDir";  
-    $isJobNameTag or push @{$directives{$qTag}}, "#$qTag -$jobNameOption $jobName";  
+    my $dashes = $qTag eq "SBATCH" ? "--" : "-";
+    my $joiner = $qTag eq "SBATCH" ? "="  : " ";
+    $isRunDirTag  or push @{$directives{$qTag}}, "#$qTag $dashes$runDirOption$joiner$runDir";  
+    $isJobNameTag or push @{$directives{$qTag}}, "#$qTag $dashes$jobNameOption$joiner$jobName";  
     if($dependencies){    
         $dependSubsDiv and $dependencies =~ s/:/,/g;
-        push @{$directives{$qTag}}, "#$qTag -$dependOption $dependPrefix$dependencies";  
+        push @{$directives{$qTag}}, "#$qTag $dashes$dependOption$joiner$dependPrefix$dependencies";  
     }  
 }
-sub assembleDirectives { # create organized blocks of directives for SGE and PBS
+sub assembleDirectives { # create organized blocks of scheduler directives
     my ($qTag) = @_;
     $directives{$qTag} or return "";
     return join("\n", @{$directives{$qTag}})."\n";
@@ -975,14 +990,16 @@ sub setJobPaths { # override any output paths specific by user; q needs to know 
     -d $runDir or qx/mkdir -p $runDir/;
     my $logDir = getLogDir($qInUse);
     $ENV{Q_LOG_DIR} = $logDir;
-    push @{$directives{'$'}}, "#\$    -j y"; 
+    my $slurmLogFile = $array ? "$logDir/%x.o%A-%a" : "$logDir/%x.o%j";
+    push @{$directives{'$'}},   "#\$    -j y"; 
     push @{$directives{'PBS'}}, "#PBS  -j oe"; 
+    # slurm: By default both standard output and standard error are directed to the same file.
     push @{$directives{'$'}}, "#\$    -o $logDir"; 
-    push @{$directives{'PBS'}}, "#PBS  -o $logDir";      
+    $qInUse eq 'slurm' or push @{$directives{'PBS'}}, "#PBS  -o $logDir";
+    push @{$directives{'SBATCH'}}, "#SBATCH --output=$slurmLogFile";
 } 
 sub checkJobName {
     $jobName =~ m|\s| and die "job name cannot contain white space: '$jobName'\n";
-    #$qInUse and $qInUse eq 'PBS' and length($jobName) > 15 and die "PBS job names cannot exceed 15 characters:  '$jobName'\n";
 } 
 sub addJob { # act on the assembled job
     my ($targetScript, $command, $arguments) = @_;
@@ -1078,9 +1095,11 @@ sub submitJob{ # disperse the job as indicated by qInUse
         foreach my $taskID(@taskIDs){  # array jobs are submitted serially when executed locally
             $ENV{PBS_ARRAYID} = $taskID;  # ensure that taskID is passed to job
             $ENV{SGE_TASK_ID} = $taskID;
+            $ENV{SLURM_ARRAY_TASK_ID} = $taskID;
             $jobID = submitLocal($targetScript, $arguments);  # just return the last local job id in the array
             $ENV{PBS_ARRAYID} = undef;
             $ENV{SGE_TASK_ID} = undef;
+            $ENV{SLURM_ARRAY_TASK_ID} = undef;
         }
         return $jobID;
         #$array and die "array jobs are not compatible with option --execute\n";
@@ -1104,7 +1123,7 @@ sub getExecutionFile {      # wrap user script in q-defined execution script tha
     print $outH 'echo "', $memoryMessage, '"', "\n";
     print $outH 'echo "q: execution ended: ', $date, '"', "\n";
     print $outH '[ "$x" -gt 0 ] && x=100', "\n";    
-    print $outH 'exit $x', "\n"; # force all q exit statuses to be 0 or 100 for appropriate SGE management
+    print $outH 'exit $x', "\n"; # force all q exit statuses to be 0 or 100
     close $outH; 
     return $executionFile; 
 }
@@ -1147,15 +1166,25 @@ sub getLocalJobID {
     }
     return $maxJobID + 1;
 }
-sub submitQueue { # submit to qsub
+sub submitQueue { # submit to cluster scheduler
     my ($targetScript, $arguments) = @_;
     $options{'dry-run'} and return $currentJob; # dry-run just returns q internal job number
-    my $executionFile = getExecutionFile($targetScript, $arguments);  
-    my $qsubCommand = "$schedulerDir/qsub $qsubOptions $executionFile";
+    my $executionFile = getExecutionFile($targetScript, $arguments);
+    # $qInUse eq 'slurm' and $qsubOptions .= " --ignore-pbs"; # do NOT use this, as slurm will read PBS directives, usually correctly
+    my $qsubCommand = "$submitTarget $qsubOptions $executionFile"; # qsub or sbatch
     my $jobID = qx/$qsubCommand/;
-    $jobID =~ m/^(\d+).*/ or die "error recovering qsub jobID\n";
-    $jobID = $1;
+    chomp $jobID;
+    $jobID or throwError("job submission failed");
+    if ($qInUse eq 'slurm') {
+        $jobID =~ m/(\d+)/;
+        $jobID = $1;
+    } else {
+        $jobID =~ m/^(\d+).*/;
+        $jobID = $1;
+    }
+    $jobID or throwError("error recovering submitted jobID");
     $jobsAdded = 1;
+    # print STDERR "$qsubCommand\n";
     unlink $executionFile;
     return $jobID;  
 }
@@ -1282,10 +1311,10 @@ sub getPassedAutoOptions {  # pass relevant options on to requested automatic jo
 }    
 sub addAutoJob {  # add requested automatic jobs before and after user-requested jobs
     my ($needed, $autoType, $mbRAM, $wallTime, $qOptions) = @_;
-    $needed or return;   
+    $needed or return;
     my $jobName = "$autoType\_$masterFileName";
-    my $scriptFile = "$masterDir/$jobName.sh";         
-    $qOptions or $qOptions = "";    
+    my $scriptFile = "$masterDir/$jobName.sh";
+    $qOptions or $qOptions = "";
     open my $scriptH, ">", $scriptFile or die "error opening $scriptFile for writing: $!\n";
     print $scriptH join("\n",
         '#!'.$bashPath,
@@ -1296,8 +1325,12 @@ sub addAutoJob {  # add requested automatic jobs before and after user-requested
         '#PBS  -N  '.$jobName,
         '#PBS  -d  '.$masterDir,
         '#PBS  -l  mem='.$mbRAM.'mb',
-        '#PBS  -l  walltime='.$wallTime,        
-        "perl $qTarget $autoType $qOptions $masterFile\n");        
+        '#PBS  -l  walltime='.$wallTime,
+        '#SBATCH --job-name='.$jobName,
+        '#SBATCH --chdir='.$masterDir,
+        '#SBATCH --mem-per-cpu='.$mbRAM.'mb',
+        '#SBATCH --time='.$wallTime,
+        "perl $qTarget $autoType $qOptions $masterFile\n");
     close $scriptH;
     $qsubMode = 2;
     $currentInstrsFile{0} or $currentInstrsFile{0} = $masterFile;
@@ -1308,5 +1341,3 @@ sub addAutoJob {  # add requested automatic jobs before and after user-requested
 #========================================================================
 
 1;
-
-

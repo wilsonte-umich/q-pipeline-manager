@@ -29,10 +29,18 @@ function checkPredecessors {  # check whether predecessors timed out
     fi
 }
 function getTaskID {  # $TASK_ID is not set if this is not an array job
-    if [ ${PBS_ARRAYID+1} ]; then
-        TASK_ID=$PBS_ARRAYID
+    if [[ "$PBS_ARRAYID" = "" && "$SGE_TASK_ID" = "" && "$SLURM_ARRAY_TASK_ID" = "" ]]; then
+        TASK_NUMBER=1
+        TASK_ID=""     
+    elif [ ${PBS_ARRAYID+1} ]; then
+        TASK_NUMBER=$PBS_ARRAYID
+        TASK_ID="--task-id $PBS_ARRAYID"
     elif [ ${SGE_TASK_ID+1} ]; then
-        TASK_ID=$SGE_TASK_ID
+        TASK_NUMBER=$SGE_TASK_ID
+        TASK_ID="--task-id $SGE_TASK_ID"
+    elif [ ${SLURM_ARRAY_TASK_ID+1} ]; then
+        TASK_NUMBER=$SLURM_ARRAY_TASK_ID
+        TASK_ID="--task-id $SLURM_ARRAY_TASK_ID"
     fi
 }
 #####################################################################

@@ -2,6 +2,8 @@
 use strict;
 use warnings;
 use Cwd(qw(abs_path));
+use File::Basename;
+use File::Copy;
 
 #========================================================================
 # 'configure.pl' sets up q for use on a host server system
@@ -75,16 +77,31 @@ my $memoryMessage = $timeVersion > 1.7 ? "" : "q: !! maxvmem value above is 4-fo
 # discover the job scheduler in use on the system
 #------------------------------------------------------------------------
 print ".";
-my $qType = 0;  # no scheduler, will require submit option -e
-if(isShellCommand('qhost')) {
-    $qType = 'SGE';          
-} elsif(isShellCommand('showq')) {
-    $qType = 'PBS'; 
-} 
-my $schedulerDir = qx|which qstat|;
-$schedulerDir or $schedulerDir = "";
-chomp $schedulerDir;
-$schedulerDir =~ s|/qstat||;
+sub getProgramPath {
+    my $path = qx{command -v $_[0] 2>/dev/null | head -n1};
+    chomp $path;
+    $path =~ s/^\s*//;
+    $path =~ s/\s*$//;
+    $path;
+}
+my ($qType, $schedulerDir, $submitTarget) = (0,'',''); # no scheduler, will require submit option -e
+if(my $check = getProgramPath('qhost')){
+    $qType = 'SGE';
+    $schedulerDir = dirname($check);
+    $submitTarget = "$schedulerDir/qsub";
+} elsif($check = getProgramPath('showq')){
+    $qType = 'PBS';
+    $schedulerDir = dirname($check);
+    $submitTarget = "$schedulerDir/qsub";
+} elsif($check = getProgramPath('sbatch')){
+    $qType = 'slurm';
+    $schedulerDir = dirname($check);
+    $submitTarget = "$schedulerDir/sbatch";
+}
+my $qTypeFile = "$qDir/qType";
+open my $qTypeH, ">", $qTypeFile or die "could not open $qTypeFile for writing: $1\n";
+print $qTypeH $qType;
+close $qTypeH;
 #------------------------------------------------------------------------
 sub isShellCommand {
     my ($shellCommand) = @_;
@@ -140,6 +157,7 @@ our $libDir = '."'$libDir'".';
 our $modulesDir = '."'$modulesDir'".';
 our $qType = '."'$qType'".';
 our $schedulerDir = '."'$schedulerDir'".';
+our $submitTarget = '."'$submitTarget'".';
 $ENV{Q_Q_TYPE} = '."'$qType'".';
 $ENV{Q_UTIL_DIR} = '."'$utilitiesDir'".';
 $ENV{Q_MOD_DIR} = '."'$modulesDir'".';
@@ -153,24 +171,24 @@ close $outH;
 # make the q program target script executable
 #------------------------------------------------------------------------
 qx|chmod ugo+x $script|;
-#------------------------------------------------------------------------
-# collect default environment variables for use by q remote server mode
-#------------------------------------------------------------------------
-print "storing default environment information\n";
-open $outH, ">", $envScript or die "could not open $envScript for writing: $!\n";
-print $outH "use strict;\n";
-print $outH "use warnings;\n";
-my %ignore = map { $_ => 1 } qw(HOME HOSTNAME LOGNAME MAIL USER USERNAME);
-foreach my $key(keys %ENV){
-    $ignore{$key} and next;
-    print $outH "\$ENV{'$key'} = '$ENV{$key}';\n";    
-}
-print $outH "1;\n";
-close $outH;
-#------------------------------------------------------------------------
-# copy the version file for use by q remote
-#------------------------------------------------------------------------
-system("cp $versionFile $qDir/remote");
+# #------------------------------------------------------------------------
+# # collect default environment variables for use by q remote server mode
+# #------------------------------------------------------------------------
+# print "storing default environment information\n";
+# open $outH, ">", $envScript or die "could not open $envScript for writing: $!\n";
+# print $outH "use strict;\n";
+# print $outH "use warnings;\n";
+# my %ignore = map { $_ => 1 } qw(HOME HOSTNAME LOGNAME MAIL USER USERNAME);
+# foreach my $key(keys %ENV){
+#     $ignore{$key} and next;
+#     print $outH "\$ENV{'$key'} = '$ENV{$key}';\n";    
+# }
+# print $outH "1;\n";
+# close $outH;
+# #------------------------------------------------------------------------
+# # copy the version file for use by q remote
+# #------------------------------------------------------------------------
+# system("cp $versionFile $qDir/remote");
 #------------------------------------------------------------------------
 print "done\n";
 print "created q program target:\n  $script\n";

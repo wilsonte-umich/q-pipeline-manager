@@ -99,8 +99,9 @@ sub deleteTargetJobs { # delete all jobs in a list in LIFO order
             $options{'force'} and print "$deleteMessage\n";
             getPermission($deleteMessage) or exit;
             my $delimiter = $qType eq "PBS" ? " " : ",";
+            my $command   = $qType eq "slurm" ? "scancel" : "qdel";
             my $jobIDList = join ($delimiter, @jobIDs);
-            system("$schedulerDir/qdel $jobIDList 2>/dev/null");
+            system("$schedulerDir/$command $jobIDList 2>/dev/null");
             updateStatusFiles(\%targetJobIDs);
         }
     } else {
