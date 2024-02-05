@@ -73,7 +73,8 @@ our %optionInfo = (# [shortOption, valueString, optionGroup, groupOrder, optionH
     'delete'=>      ["x", undef,   "submit",  2, "kill matching pending/running jobs when repeat job submissions are encountered"],    
     'execute'=>     ["e", undef,   "submit",  3, "run target jobs immediately in shell instead of submitting with qsub"],   
     'force'=>       ["f", undef,   "submit",  4, "suppress warnings that duplicate jobs will be queued, files deleted, etc."],  
-    'verbose'=>     ["V", undef,   "submit",  5, "report all commands acted on from data_script (extremely verbose)"],    
+    'verbose'=>     ["V", undef,   "submit",  5, "report all commands acted on from data_script (extremely verbose)"],
+    'account'=>     ["A", "<str>", "submit",  6, "account for submitting samples via the Slurm job scheduler"],
 #------------------------------------------------------------------------------------------------------------
     'archive'=>     ["a", undef,   "status",  0, "show the most recent archive instead of the current status"], 
     'no-update'=>   ["u", undef,   "status",  1, "suppress the status update, just show the most recently recorded status"],   
@@ -122,12 +123,12 @@ my %longOptions = map { ${$optionInfo{$_}}[0] => $_ } keys %optionInfo; # for co
 # associate commands with allowed and required options
 #------------------------------------------------------------------------
 our %commandOptions =  ( # 0=allowed, 1=required
-    submit     =>  {'dry-run'=>0,'execute'=>0,'depend'=>0,'delete'=>0,'force'=>0,'verbose'=>0,
+    submit     =>  {'dry-run'=>0,'execute'=>0,'depend'=>0,'delete'=>0,'force'=>0,'verbose'=>0,'account'=>0,
                     'lock'=>0,'publish'=>0,'out-dir'=>0,'mask'=>0,'title'=>0,'long'=>0,'intro-file'=>0,    
                     '_suppress-echo_'=>0,'_extending_'=>0},
-    extend     =>  {'dry-run'=>0,'execute'=>0,'depend'=>0,'delete'=>0,'force'=>0,'verbose'=>0,
+    extend     =>  {'dry-run'=>0,'execute'=>0,'depend'=>0,'delete'=>0,'force'=>0,'verbose'=>0,'account'=>0,
                     'lock'=>0,'publish'=>0,'out-dir'=>0,'mask'=>0,'title'=>0,'long'=>0,'intro-file'=>0},   
-    resubmit   =>  {'dry-run'=>0,'execute'=>0,'depend'=>0,'delete'=>0,'force'=>0,
+    resubmit   =>  {'dry-run'=>0,'execute'=>0,'depend'=>0,'delete'=>0,'force'=>0,'account'=>0,
                     'lock'=>0,'publish'=>0,'out-dir'=>0,'mask'=>0,'title'=>0,'long'=>0,'intro-file'=>0,    
                     'job'=>1,'no-chain'=>0,
                     '_suppress-echo_'=>0},  

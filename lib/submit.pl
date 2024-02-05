@@ -958,7 +958,8 @@ sub addDirectives { # include directives established by q = runDir, jobName, dep
     if($dependencies){    
         $dependSubsDiv and $dependencies =~ s/:/,/g;
         push @{$directives{$qTag}}, "#$qTag $dashes$dependOption$joiner$dependPrefix$dependencies";  
-    }  
+    }
+    $qTag eq "SBATCH" and $options{account} and push @{$directives{$qTag}}, "#$qTag $dashes"."account"."$joiner$options{account}";  
 }
 sub assembleDirectives { # create organized blocks of scheduler directives
     my ($qTag) = @_;
