@@ -16,6 +16,9 @@ getTaskID <- function(){
     if(is.na(TASK_ID)){
         TASK_ID <- as.numeric(Sys.getenv("PBS_ARRAYID"))
     }
+    if(is.na(TASK_ID)){
+        TASK_ID <- as.numeric(Sys.getenv("SLURM_ARRAY_TASK_ID"))
+    }
     return(TASK_ID)
 }
 #--------------------------------------------------------------------

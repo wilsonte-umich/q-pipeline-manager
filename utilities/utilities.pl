@@ -12,8 +12,8 @@
 #     my $taskObject = getTaskObject("LIST_NAME");  # LIST_NAME refers to a space-delimited environment variable
 #--------------------------------------------------------------------
 sub getTaskID {
-    my $TASK_ID = $ENV{SGE_TASK_ID} ? $ENV{SGE_TASK_ID} : $ENV{PBS_ARRAYID};
-    defined $TASK_ID or die "getTaskID error: neither SGE_TASK_ID nor PBS_ARRAYID was set\n".
+    my $TASK_ID = $ENV{SGE_TASK_ID} ? $ENV{SGE_TASK_ID} : ($ENV{PBS_ARRAYID} ? $ENV{PBS_ARRAYID} : $ENV{SLURM_ARRAY_TASK_ID});
+    defined $TASK_ID or die "getTaskID error: neither SGE_TASK_ID nor PBS_ARRAYID nor SLURM_ARRAY_TASK_ID was set\n".
                             "most likely, job scheduler option -t was not properly configured\n";
     return $TASK_ID;
 }

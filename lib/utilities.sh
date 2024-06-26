@@ -178,18 +178,18 @@ function echoSnipLines {  # generate the output
 
 
 #####################################################################
-# functions which may be called by user to interpret array $TASK_ID
+# functions which may be called by user to interpret array $TASK_NUMBER
 #--------------------------------------------------------------------
 # usage:
 #     getTaskFile $FILE_GLOB  [sets global variable $TASK_FILE]
 #     getTaskObject $VAR_NAME object1 object2 ...  [sets global variable $VAR_NAME]
 #--------------------------------------------------------------------
 function getTaskFile {
-    TASK_FILE=${!TASK_ID};
+    TASK_FILE=${!TASK_NUMBER};
 }
 function getTaskObject {  # example:  getTaskObject MY_CHUNK $CHUNKS
     local __VAR_NAME=$1
-    local __INDEX=$(($TASK_ID + 1))
+    local __INDEX=$(($TASK_NUMBER + 1))
     local __OBJECT=${!__INDEX}
     eval $__VAR_NAME="'$__OBJECT'"
 }
