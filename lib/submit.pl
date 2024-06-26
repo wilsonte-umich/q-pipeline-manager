@@ -819,7 +819,7 @@ sub processScriptLine { # act on directives in environment and target scripts
         $isJobNameTag = 1;
     } elsif($$scriptLine =~ m/^#\$\s+-t\s+(.+)/ or     # determine if this is an array job
             $$scriptLine =~ m/^#PBS\s+-t\s+(.+)/ or 
-            $$scriptLine =~ m/^(#SBATCH\s+--array=)(.+)/){
+            $$scriptLine =~ m/^#SBATCH\s+--array=(.+)/){
         $array = getArrayTaskIDs($1, $scriptLine);  # collect the complete set of array task IDs
     } elsif($$scriptLine =~ m/^#!(.+)/){ # manage qsub target shebang line
         $shebang = $1;  
